@@ -1,0 +1,240 @@
+#!/usr/bin/env node
+/**
+ * Claude API Server - Wraps Claude CLI (OAuth) as a REST API
+ *
+ * A lightweight Express server that exposes Claude's capabilities via HTTP endpoints.
+ * Requires the Claude CLI to be installed and authenticated on the host machine.
+ */
+
+import { spawn } from 'child_process'
+import express, { Request, Response, NextFunction } from 'express'
+import cors from 'cors'
+import { randomUUID } from 'crypto'
+
+const VERSION = '1.0.0'
+
+// Configuration from environment variables
+const HOST = process.env.CLAUDE_API_HOST || '127.0.0.1'
+const PORT = parseInt(process.env.CLAUDE_API_PORT || '5051', 10)
+const TIMEOUT = parseInt(process.env.CLAUDE_API_TIMEOUT || '120', 10) * 1000
+const ENABLE_CORS = process.env.CLAUDE_API_CORS?.toLowerCase() === 'true'
+const LOG_LEVEL = process.env.CLAUDE_API_LOG_LEVEL?.toUpperCase() || 'INFO'
+
+// Types
+interface Message {
+  role: string
+  content: string
+}
+
+interface AskRequest {
+  prompt: string
+}
+
+interface ChatRequest {
+  messages: Message[]
+  system?: string
+}
+
+interface RequestWithId extends Request {
+  requestId?: string
+}
+
+// Logger
+const shouldLog = (level: string): boolean => {
+  const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR']
+  return levels.indexOf(level) >= levels.indexOf(LOG_LEVEL)
+}
+
+const log = (level: string, message: string) => {
+  if (shouldLog(level)) {
+    console.log(`${new Date().toISOString()} - claude-api - ${level} - ${message}`)
+  }
+}
+
+// Run Claude CLI
+const runClaude = (prompt: string, requestId: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars)`)
+
+    const proc = spawn('claude', ['-p', prompt], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    let stdout = ''
+    let stderr = ''
+
+    const timer = setTimeout(() => {
+      proc.kill()
+      log('ERROR', `[${requestId}] Request timed out after ${TIMEOUT / 1000}s`)
+      reject({
+        status: 504,
+        error: 'timeout',
+        message: `Request timed out after ${TIMEOUT / 1000} seconds`,
+        request_id: requestId
+      })
+    }, TIMEOUT)
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    proc.on('close', (code) => {
+      clearTimeout(timer)
+
+      if (code !== 0) {
+        const errorMsg = stderr.trim() || 'Claude CLI returned non-zero exit code'
+        log('ERROR', `[${requestId}] Claude CLI error: ${errorMsg}`)
+        reject({
+          status: 500,
+          error: 'cli_error',
+          message: errorMsg,
+          request_id: requestId
+        })
+        return
+      }
+
+      const response = stdout.trim()
+      log('INFO', `[${requestId}] Claude CLI response (length: ${response.length} chars)`)
+      resolve(response)
+    })
+
+    proc.on('error', (err) => {
+      clearTimeout(timer)
+      log('ERROR', `[${requestId}] Failed to spawn Claude CLI: ${err.message}`)
+      reject({
+        status: 500,
+        error: 'spawn_error',
+        message: `Failed to spawn Claude CLI: ${err.message}`,
+        request_id: requestId
+      })
+    })
+  })
+}
+
+// Create Express app
+const app = express()
+
+app.use(express.json())
+
+if (ENABLE_CORS) {
+  app.use(cors())
+}
+
+// Request ID middleware
+app.use((req: RequestWithId, res: Response, next: NextFunction) => {
+  const requestId = randomUUID().slice(0, 8)
+  req.requestId = requestId
+  res.setHeader('X-Request-ID', requestId)
+  log('DEBUG', `[${requestId}] ${req.method} ${req.path}`)
+  next()
+})
+
+// POST /ask - Simple prompt/response
+app.post('/ask', async (req: RequestWithId, res: Response) => {
+  const body = req.body as AskRequest
+
+  if (!body.prompt) {
+    return res.status(400).json({
+      error: 'validation_error',
+      message: 'prompt is required',
+      request_id: req.requestId
+    })
+  }
+
+  try {
+    const response = await runClaude(body.prompt, req.requestId!)
+    res.json({ success: true, response })
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      error: err.error || 'unknown_error',
+      message: err.message || 'An unknown error occurred',
+      request_id: req.requestId
+    })
+  }
+})
+
+// POST /chat - Chat with message history
+app.post('/chat', async (req: RequestWithId, res: Response) => {
+  const body = req.body as ChatRequest
+
+  if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+    return res.status(400).json({
+      error: 'validation_error',
+      message: 'messages array is required and must not be empty',
+      request_id: req.requestId
+    })
+  }
+
+  const promptParts: string[] = []
+
+  if (body.system) {
+    promptParts.push(`System: ${body.system}\n`)
+  }
+
+  for (const msg of body.messages) {
+    const role = msg.role.charAt(0).toUpperCase() + msg.role.slice(1)
+    promptParts.push(`${role}: ${msg.content}`)
+  }
+
+  try {
+    const response = await runClaude(promptParts.join('\n'), req.requestId!)
+    res.json({
+      success: true,
+      message: { role: 'assistant', content: response }
+    })
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      error: err.error || 'unknown_error',
+      message: err.message || 'An unknown error occurred',
+      request_id: req.requestId
+    })
+  }
+})
+
+// GET /health - Health check
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' })
+})
+
+// GET /version - Version info
+app.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    version: VERSION,
+    timeout: TIMEOUT / 1000,
+    cors_enabled: ENABLE_CORS
+  })
+})
+
+// Start server
+const startServer = () => {
+  console.log(`\n${'='.repeat(50)}`)
+  console.log(`  Claude API Server v${VERSION}`)
+  console.log(`${'='.repeat(50)}`)
+  console.log(`\nEndpoints:`)
+  console.log(`  POST /ask     - Simple prompt/response`)
+  console.log(`  POST /chat    - Chat with message history`)
+  console.log(`  GET  /health  - Health check`)
+  console.log(`  GET  /version - API version info`)
+  console.log(`\nConfiguration:`)
+  console.log(`  Host: ${HOST}`)
+  console.log(`  Port: ${PORT}`)
+  console.log(`  Timeout: ${TIMEOUT / 1000}s`)
+  console.log(`  CORS: ${ENABLE_CORS ? 'enabled' : 'disabled'}`)
+  console.log(`\nExample:`)
+  console.log(`  curl -X POST http://${HOST}:${PORT}/ask \\`)
+  console.log(`    -H "Content-Type: application/json" \\`)
+  console.log(`    -d '{"prompt": "Hello!"}'`)
+  console.log(`\n${'='.repeat(50)}\n`)
+
+  app.listen(PORT, HOST, () => {
+    log('INFO', `Claude API Server v${VERSION} starting...`)
+    log('INFO', `Host: ${HOST}, Port: ${PORT}, Timeout: ${TIMEOUT / 1000}s`)
+    log('INFO', `CORS: ${ENABLE_CORS ? 'enabled' : 'disabled'}`)
+    log('INFO', `Server listening on http://${HOST}:${PORT}`)
+  })
+}
+
+startServer()

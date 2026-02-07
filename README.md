@@ -6,11 +6,16 @@ A REST API wrapper for the Claude CLI.
 
 ## TL;DR - Get Running in 30 Seconds
 
-**Prerequisites:** Python 3.9+ and [Claude CLI](https://github.com/anthropics/claude-cli) authenticated (`claude login`)
+**Prerequisites:** Node.js 18+ and [Claude CLI](https://github.com/anthropics/claude-cli) authenticated (`claude login`)
 
 ```bash
-pip install -r requirements.txt
-python claude_api.py
+npx clauditorium
+```
+
+**Or install globally:**
+```bash
+npm install -g clauditorium
+clauditorium
 ```
 
 **Test it:**
@@ -20,7 +25,7 @@ curl -X POST http://localhost:5051/ask \
   -d '{"prompt": "Hello!"}'
 ```
 
-That's it. Server runs on `http://localhost:5051`. API docs at `http://localhost:5051/docs`.
+That's it. Server runs on `http://localhost:5051`.
 
 ---
 
@@ -30,7 +35,20 @@ That's it. Server runs on `http://localhost:5051`. API docs at `http://localhost
 - Multi-turn chat with message history
 - Configurable via environment variables
 - Request tracking with unique IDs
-- Interactive API docs at `/docs`
+- Zero dependencies beyond Express
+
+## Installation
+
+```bash
+# Run directly with npx (no install needed)
+npx clauditorium
+
+# Or install globally
+npm install -g clauditorium
+
+# Or install locally in a project
+npm install clauditorium
+```
 
 ## API Endpoints
 
@@ -40,7 +58,6 @@ That's it. Server runs on `http://localhost:5051`. API docs at `http://localhost
 | `/chat` | POST | Chat with message history |
 | `/health` | GET | Health check |
 | `/version` | GET | Version info |
-| `/docs` | GET | Interactive API docs |
 
 ### POST /ask
 
@@ -79,17 +96,7 @@ Set these environment variables to customize behavior:
 
 Example:
 ```bash
-CLAUDE_API_PORT=8080 python claude_api.py
-```
-
-## Makefile Commands
-
-```bash
-make install  # Install dependencies
-make run      # Start server
-make dev      # Start with auto-reload
-make test     # Run health check
-make help     # Show all commands
+CLAUDE_API_PORT=8080 clauditorium
 ```
 
 ## Troubleshooting
@@ -108,12 +115,12 @@ claude login
 
 **Request timeouts**
 ```bash
-CLAUDE_API_TIMEOUT=300 python claude_api.py
+CLAUDE_API_TIMEOUT=300 clauditorium
 ```
 
 **CORS errors in browser**
 ```bash
-CLAUDE_API_CORS=true python claude_api.py
+CLAUDE_API_CORS=true clauditorium
 ```
 
 ## License

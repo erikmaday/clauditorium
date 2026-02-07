@@ -1,0 +1,17 @@
+# Source (we publish dist/)
+src/
+tsconfig.json
+
+# Development
+.git/
+.gitignore
+.claude/
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Docs (README.md included via package.json files)
+CLAUDE.md

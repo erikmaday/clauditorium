@@ -1,17 +1,17 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this repository.
 
 ## Overview
 
-This is a FastAPI REST API server that wraps the Claude CLI (OAuth-authenticated) to expose Claude's capabilities via HTTP endpoints. Uses async subprocess calls and uvicorn for high concurrency.
+Clauditorium is an Express REST API server that wraps the Claude CLI (OAuth-authenticated) to expose Claude's capabilities via HTTP endpoints.
 
 ## Running the Server
 
 ```bash
-make install  # Install dependencies
-make run      # Start server
-make dev      # Start with auto-reload
+npm install   # Install dependencies
+npm start     # Start server
+npm run dev   # Start with auto-reload
 ```
 
 Server runs on `http://localhost:5051` by default.
@@ -26,7 +26,6 @@ The Claude CLI must be installed and authenticated (OAuth) on the host machine. 
 - `POST /chat` - Chat with message history (body: `{"messages": [...], "system": "..."}`)
 - `GET /health` - Health check
 - `GET /version` - API version and config info
-- `GET /docs` - Interactive API documentation
 
 ## Configuration
 
