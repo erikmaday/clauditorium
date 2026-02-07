@@ -1,83 +1,48 @@
 # Claude API Server
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+A REST API wrapper for the Claude CLI.
 
-A lightweight REST API server that wraps the Claude CLI, exposing Claude's capabilities via HTTP endpoints. Built with FastAPI for high performance and async support.
+---
+
+## TL;DR - Get Running in 30 Seconds
+
+**Prerequisites:** Python 3.9+ and [Claude CLI](https://github.com/anthropics/claude-cli) authenticated (`claude login`)
+
+```bash
+pip install -r requirements.txt
+python claude_api.py
+```
+
+**Test it:**
+```bash
+curl -X POST http://localhost:5051/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello!"}'
+```
+
+That's it. Server runs on `http://localhost:5051`. API docs at `http://localhost:5051/docs`.
+
+---
 
 ## Features
 
-- **Simple REST API** - Clean HTTP endpoints for interacting with Claude
-- **Async Architecture** - Built on FastAPI with full async/await support for high concurrency
-- **Chat History Support** - Multi-turn conversations with message history
-- **System Prompts** - Optional system prompt configuration for chat sessions
-- **Request Tracking** - Unique request IDs for debugging and monitoring
-- **Configurable** - Environment variable configuration for host, port, timeout, and CORS
-- **Interactive Docs** - Auto-generated OpenAPI documentation at `/docs`
+- Simple REST API for Claude
+- Multi-turn chat with message history
+- Configurable via environment variables
+- Request tracking with unique IDs
+- Interactive API docs at `/docs`
 
-## Quick Start
+## API Endpoints
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/claude-api.git
-cd claude-api
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ask` | POST | Send a prompt, get a response |
+| `/chat` | POST | Chat with message history |
+| `/health` | GET | Health check |
+| `/version` | GET | Version info |
+| `/docs` | GET | Interactive API docs |
 
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Start the server
-python claude_api.py
-```
-
-The server will be available at `http://127.0.0.1:5051`
-
-## Prerequisites
-
-- **Python 3.9+**
-- **Claude CLI** - Must be installed and authenticated via OAuth
-  ```bash
-  # Install Claude CLI (if not already installed)
-  npm install -g @anthropic/claude-cli
-
-  # Authenticate (follow the prompts)
-  claude login
-  ```
-
-## Installation
-
-### Using pip
-
-```bash
-pip install -r requirements.txt
-```
-
-### Using Make
-
-```bash
-make install
-```
-
-## Usage
-
-### Starting the Server
-
-```bash
-# Default (localhost:5051)
-python claude_api.py
-
-# Or with Make
-make run
-
-# With auto-reload for development
-make dev
-```
-
-### API Endpoints
-
-#### POST /ask - Simple Prompt/Response
-
-Send a single prompt and get a response.
+### POST /ask
 
 ```bash
 curl -X POST http://localhost:5051/ask \
@@ -85,17 +50,7 @@ curl -X POST http://localhost:5051/ask \
   -d '{"prompt": "What is the capital of France?"}'
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "response": "The capital of France is Paris."
-}
-```
-
-#### POST /chat - Chat with Message History
-
-Send a conversation with message history and optional system prompt.
+### POST /chat
 
 ```bash
 curl -X POST http://localhost:5051/chat \
@@ -103,157 +58,64 @@ curl -X POST http://localhost:5051/chat \
   -d '{
     "messages": [
       {"role": "user", "content": "Hello!"},
-      {"role": "assistant", "content": "Hi there! How can I help you?"},
+      {"role": "assistant", "content": "Hi! How can I help?"},
       {"role": "user", "content": "What is 2+2?"}
     ],
-    "system": "You are a helpful math tutor."
+    "system": "You are a helpful assistant."
   }'
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": {
-    "role": "assistant",
-    "content": "2 + 2 equals 4."
-  }
-}
-```
-
-#### GET /health - Health Check
-
-Check if the server is running.
-
-```bash
-curl http://localhost:5051/health
-```
-
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
-#### GET /version - Version Info
-
-Get API version and configuration details.
-
-```bash
-curl http://localhost:5051/version
-```
-
-**Response:**
-```json
-{
-  "version": "1.0.0",
-  "timeout": 120,
-  "cors_enabled": false
-}
-```
-
-#### GET /docs - Interactive Documentation
-
-Visit `http://localhost:5051/docs` in your browser for interactive API documentation powered by Swagger UI.
-
 ## Configuration
 
-Configure the server using environment variables:
+Set these environment variables to customize behavior:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CLAUDE_API_HOST` | Server host address | `127.0.0.1` |
-| `CLAUDE_API_PORT` | Server port | `5051` |
-| `CLAUDE_API_TIMEOUT` | Request timeout in seconds | `120` |
-| `CLAUDE_API_CORS` | Enable CORS (`true`/`false`) | `false` |
-| `CLAUDE_API_LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | `INFO` |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAUDE_API_HOST` | `127.0.0.1` | Server host |
+| `CLAUDE_API_PORT` | `5051` | Server port |
+| `CLAUDE_API_TIMEOUT` | `120` | Request timeout (seconds) |
+| `CLAUDE_API_CORS` | `false` | Enable CORS |
+| `CLAUDE_API_LOG_LEVEL` | `INFO` | Log level |
 
-### Example with Environment Variables
+Example:
+```bash
+CLAUDE_API_PORT=8080 python claude_api.py
+```
+
+## Makefile Commands
 
 ```bash
-CLAUDE_API_PORT=8080 CLAUDE_API_CORS=true python claude_api.py
+make install  # Install dependencies
+make run      # Start server
+make dev      # Start with auto-reload
+make test     # Run health check
+make help     # Show all commands
 ```
-
-Or create a `.env` file (copy from `.env.example`):
-
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-## Error Handling
-
-The API returns structured error responses:
-
-```json
-{
-  "detail": {
-    "error": "timeout",
-    "message": "Request timed out after 120 seconds",
-    "request_id": "a1b2c3d4"
-  }
-}
-```
-
-**Error Types:**
-- `timeout` (504) - Request exceeded the configured timeout
-- `cli_error` (500) - Claude CLI returned an error
 
 ## Troubleshooting
 
-### "Claude CLI not found"
-
-Ensure the Claude CLI is installed and in your PATH:
+**"Claude CLI not found"**
 ```bash
-which claude  # Should show the path to claude
-claude --version  # Should show the version
+# Verify Claude CLI is installed
+which claude
+claude --version
 ```
 
-### "Authentication required"
-
-The Claude CLI needs to be authenticated:
+**"Authentication required"**
 ```bash
 claude login
 ```
 
-### Request timeouts
-
-Increase the timeout for long-running requests:
+**Request timeouts**
 ```bash
 CLAUDE_API_TIMEOUT=300 python claude_api.py
 ```
 
-### CORS errors in browser
-
-Enable CORS for browser-based clients:
+**CORS errors in browser**
 ```bash
 CLAUDE_API_CORS=true python claude_api.py
 ```
 
-## Development
-
-### Running with Auto-reload
-
-```bash
-make dev
-```
-
-### Running Tests
-
-```bash
-make test
-```
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built with [FastAPI](https://fastapi.tiangolo.com/)
-- Powered by [Claude](https://anthropic.com/claude) from Anthropic
+MIT - see [LICENSE](LICENSE)
