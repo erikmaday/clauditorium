@@ -35,7 +35,7 @@ That's it. Server runs on `http://localhost:5051`.
 - Multi-turn chat with message history
 - Configurable via environment variables
 - Request tracking with unique IDs
-- Zero dependencies beyond Express
+- Minimal dependencies (Express + cors)
 
 ## Installation
 

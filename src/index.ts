@@ -7,9 +7,9 @@
  */
 
 import { spawn } from 'child_process'
-import express, { Request, Response, NextFunction } from 'express'
-import cors from 'cors'
 import { randomUUID } from 'crypto'
+import cors from 'cors'
+import express, { Request, Response, NextFunction } from 'express'
 
 const VERSION = '1.0.0'
 
@@ -39,26 +39,35 @@ interface RequestWithId extends Request {
   requestId?: string
 }
 
-// Logger
-const shouldLog = (level: string): boolean => {
-  const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR']
-  return levels.indexOf(level) >= levels.indexOf(LOG_LEVEL)
+interface CliError {
+  status: number
+  error: string
+  message: string
+  request_id: string
 }
 
-const log = (level: string, message: string) => {
+// Logger
+const LOG_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR']
+
+function shouldLog(level: string): boolean {
+  return LOG_LEVELS.indexOf(level) >= LOG_LEVELS.indexOf(LOG_LEVEL)
+}
+
+function log(level: string, message: string): void {
   if (shouldLog(level)) {
     console.log(`${new Date().toISOString()} - claude-api - ${level} - ${message}`)
   }
 }
 
 // Run Claude CLI
-const runClaude = (prompt: string, requestId: string): Promise<string> => {
+function runClaude(prompt: string, requestId: string): Promise<string> {
   return new Promise((resolve, reject) => {
     log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars)`)
 
     const proc = spawn('claude', ['-p', prompt], {
       stdio: ['ignore', 'pipe', 'pipe']
     })
+
     let stdout = ''
     let stderr = ''
 
@@ -114,6 +123,22 @@ const runClaude = (prompt: string, requestId: string): Promise<string> => {
   })
 }
 
+// Format chat messages into a prompt string
+function formatChatPrompt(messages: Message[], system?: string): string {
+  const parts: string[] = []
+
+  if (system) {
+    parts.push(`System: ${system}\n`)
+  }
+
+  for (const msg of messages) {
+    const role = msg.role.charAt(0).toUpperCase() + msg.role.slice(1)
+    parts.push(`${role}: ${msg.content}`)
+  }
+
+  return parts.join('\n')
+}
+
 // Create Express app
 const app = express()
 
@@ -124,10 +149,10 @@ if (ENABLE_CORS) {
 }
 
 // Request ID middleware
-app.use((req: RequestWithId, res: Response, next: NextFunction) => {
+app.use((req: RequestWithId, _res: Response, next: NextFunction) => {
   const requestId = randomUUID().slice(0, 8)
   req.requestId = requestId
-  res.setHeader('X-Request-ID', requestId)
+  _res.setHeader('X-Request-ID', requestId)
   log('DEBUG', `[${requestId}] ${req.method} ${req.path}`)
   next()
 })
@@ -137,20 +162,22 @@ app.post('/ask', async (req: RequestWithId, res: Response) => {
   const body = req.body as AskRequest
 
   if (!body.prompt) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'validation_error',
       message: 'prompt is required',
       request_id: req.requestId
     })
+    return
   }
 
   try {
     const response = await runClaude(body.prompt, req.requestId!)
     res.json({ success: true, response })
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      error: err.error || 'unknown_error',
-      message: err.message || 'An unknown error occurred',
+  } catch (err) {
+    const error = err as CliError
+    res.status(error.status || 500).json({
+      error: error.error || 'unknown_error',
+      message: error.message || 'An unknown error occurred',
       request_id: req.requestId
     })
   }
@@ -161,34 +188,27 @@ app.post('/chat', async (req: RequestWithId, res: Response) => {
   const body = req.body as ChatRequest
 
   if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'validation_error',
       message: 'messages array is required and must not be empty',
       request_id: req.requestId
     })
+    return
   }
 
-  const promptParts: string[] = []
-
-  if (body.system) {
-    promptParts.push(`System: ${body.system}\n`)
-  }
-
-  for (const msg of body.messages) {
-    const role = msg.role.charAt(0).toUpperCase() + msg.role.slice(1)
-    promptParts.push(`${role}: ${msg.content}`)
-  }
+  const prompt = formatChatPrompt(body.messages, body.system)
 
   try {
-    const response = await runClaude(promptParts.join('\n'), req.requestId!)
+    const response = await runClaude(prompt, req.requestId!)
     res.json({
       success: true,
       message: { role: 'assistant', content: response }
     })
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      error: err.error || 'unknown_error',
-      message: err.message || 'An unknown error occurred',
+  } catch (err) {
+    const error = err as CliError
+    res.status(error.status || 500).json({
+      error: error.error || 'unknown_error',
+      message: error.message || 'An unknown error occurred',
       request_id: req.requestId
     })
   }
@@ -208,11 +228,12 @@ app.get('/version', (_req: Request, res: Response) => {
   })
 })
 
-// Start server
-const startServer = () => {
-  console.log(`\n${'='.repeat(50)}`)
+// Print startup banner
+function printBanner(): void {
+  const divider = '='.repeat(50)
+  console.log(`\n${divider}`)
   console.log(`  Claude API Server v${VERSION}`)
-  console.log(`${'='.repeat(50)}`)
+  console.log(divider)
   console.log(`\nEndpoints:`)
   console.log(`  POST /ask     - Simple prompt/response`)
   console.log(`  POST /chat    - Chat with message history`)
@@ -227,7 +248,12 @@ const startServer = () => {
   console.log(`  curl -X POST http://${HOST}:${PORT}/ask \\`)
   console.log(`    -H "Content-Type: application/json" \\`)
   console.log(`    -d '{"prompt": "Hello!"}'`)
-  console.log(`\n${'='.repeat(50)}\n`)
+  console.log(`\n${divider}\n`)
+}
+
+// Start server
+function startServer(): void {
+  printBanner()
 
   app.listen(PORT, HOST, () => {
     log('INFO', `Claude API Server v${VERSION} starting...`)
