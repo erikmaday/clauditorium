@@ -28,11 +28,13 @@ interface Message {
 
 interface AskRequest {
   prompt: string
+  model?: string
 }
 
 interface ChatRequest {
   messages: Message[]
   system?: string
+  model?: string
 }
 
 interface RequestWithId extends Request {
@@ -60,11 +62,17 @@ function log(level: string, message: string): void {
 }
 
 // Run Claude CLI
-function runClaude(prompt: string, requestId: string): Promise<string> {
+function runClaude(prompt: string, requestId: string, model?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars)`)
+    const args = ['-p', prompt]
 
-    const proc = spawn('claude', ['-p', prompt], {
+    if (model) {
+      args.push('--model', model)
+    }
+
+    log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars${model ? `, model: ${model}` : ''})`)
+
+    const proc = spawn('claude', args, {
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
@@ -171,7 +179,7 @@ app.post('/ask', async (req: RequestWithId, res: Response) => {
   }
 
   try {
-    const response = await runClaude(body.prompt, req.requestId!)
+    const response = await runClaude(body.prompt, req.requestId!, body.model)
     res.json({ success: true, response })
   } catch (err) {
     const error = err as CliError
@@ -199,7 +207,7 @@ app.post('/chat', async (req: RequestWithId, res: Response) => {
   const prompt = formatChatPrompt(body.messages, body.system)
 
   try {
-    const response = await runClaude(prompt, req.requestId!)
+    const response = await runClaude(prompt, req.requestId!, body.model)
     res.json({
       success: true,
       message: { role: 'assistant', content: response }
