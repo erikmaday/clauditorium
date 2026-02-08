@@ -32,6 +32,7 @@ That's it. Server runs on `http://localhost:5051`.
 ## Features
 
 - Simple REST API for Claude
+- Per-request model selection via `model` parameter
 - Multi-turn chat with message history
 - Configurable via environment variables
 - Request tracking with unique IDs
@@ -67,6 +68,14 @@ curl -X POST http://localhost:5051/ask \
   -d '{"prompt": "What is the capital of France?"}'
 ```
 
+With a specific model:
+
+```bash
+curl -X POST http://localhost:5051/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "What is the capital of France?", "model": "claude-haiku-4-5-20251001"}'
+```
+
 ### POST /chat
 
 ```bash
@@ -78,9 +87,12 @@ curl -X POST http://localhost:5051/chat \
       {"role": "assistant", "content": "Hi! How can I help?"},
       {"role": "user", "content": "What is 2+2?"}
     ],
-    "system": "You are a helpful assistant."
+    "system": "You are a helpful assistant.",
+    "model": "claude-sonnet-4-5-20250929"
   }'
 ```
+
+The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 
 ## Configuration
 
