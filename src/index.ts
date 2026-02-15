@@ -19,6 +19,11 @@ const PORT = parseInt(process.env.CLAUDE_API_PORT || '5051', 10)
 const TIMEOUT = parseInt(process.env.CLAUDE_API_TIMEOUT || '120', 10) * 1000
 const ENABLE_CORS = process.env.CLAUDE_API_CORS?.toLowerCase() === 'true'
 const LOG_LEVEL = process.env.CLAUDE_API_LOG_LEVEL?.toUpperCase() || 'INFO'
+const CLAUDE_SPAWN_ENV_BLOCKLIST = [
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+]
 
 // Types
 interface Message {
@@ -61,6 +66,14 @@ function log(level: string, message: string): void {
   }
 }
 
+function buildClaudeSpawnEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env }
+  for (const key of CLAUDE_SPAWN_ENV_BLOCKLIST) {
+    delete env[key]
+  }
+  return env
+}
+
 // Run Claude CLI
 function runClaude(prompt: string, requestId: string, model?: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -72,8 +85,15 @@ function runClaude(prompt: string, requestId: string, model?: string): Promise<s
 
     log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars${model ? `, model: ${model}` : ''})`)
 
+    const spawnEnv = buildClaudeSpawnEnv()
+    const strippedKeys = CLAUDE_SPAWN_ENV_BLOCKLIST.filter((key) => process.env[key] !== undefined)
+    if (strippedKeys.length > 0) {
+      log('DEBUG', `[${requestId}] Stripped inherited env vars before Claude spawn: ${strippedKeys.join(', ')}`)
+    }
+
     const proc = spawn('claude', args, {
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: spawnEnv
     })
 
     let stdout = ''
