@@ -77,6 +77,34 @@ npm run build
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
 
+## Use In Another Dockerized App
+
+Install `clauditorium` in your own Node service image and run it with a Claude token:
+
+```dockerfile
+FROM node:22-bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates binutils \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install -g @anthropic-ai/claude-code
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+CMD ["npx", "clauditorium"]
+```
+
+Runtime example:
+
+```bash
+docker run --rm -p 5051:5051 \
+  -e CLAUDE_CODE_OAUTH_TOKEN="<token>" \
+  your-image-name
+```
+
 ## API Contract Governance
 
 OpenAPI contract correctness is CI-gated with strict enforcement:
