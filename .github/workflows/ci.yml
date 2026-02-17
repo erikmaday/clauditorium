@@ -26,6 +26,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: OpenAPI Lint
+        run: npm run openapi:lint
+
+      - name: OpenAPI Validate
+        run: npm run openapi:validate
+
+      - name: Contract Tests
+        run: npm run contract:test
+
       - name: Test (Coverage Gate)
         run: npm run test:coverage
 

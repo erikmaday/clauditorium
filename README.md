@@ -77,6 +77,22 @@ npm run build
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
 
+## API Contract Governance
+
+OpenAPI contract correctness is CI-gated with strict enforcement:
+
+- `npm run openapi:lint` validates spec quality and structure
+- `npm run openapi:validate` performs full OpenAPI schema validation
+- `npm run contract:test` verifies runtime routes and response payloads against `openapi.yaml`
+
+Run all contract checks locally:
+
+```bash
+npm run api:contract:check
+```
+
+Any endpoint, request/response shape, status code, or auth requirement change must include matching updates to `openapi.yaml` and contract tests in the same PR.
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
