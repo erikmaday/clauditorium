@@ -19,6 +19,10 @@ describe('config/env', () => {
     expect(config.rateLimitWindowMs).toBe(60000)
     expect(config.rateLimitMaxRequests).toBe(0)
     expect(config.healthHistoryLimit).toBe(25)
+    expect(config.conversationTtlMs).toBe(86400000)
+    expect(config.maxConversations).toBe(1000)
+    expect(config.contextWarnChars).toBe(80000)
+    expect(config.contextTargetChars).toBe(120000)
     expect(config.bodyLimit).toBe('1mb')
     expect(config.corsEnabled).toBe(false)
     expect(config.strictHealth).toBe(false)
@@ -35,6 +39,10 @@ describe('config/env', () => {
       CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS: '30',
       CLAUDE_API_RATE_LIMIT_MAX_REQUESTS: '5',
       CLAUDE_API_HEALTH_HISTORY_LIMIT: '50',
+      CLAUDE_API_CONVERSATION_TTL_SECONDS: '3600',
+      CLAUDE_API_MAX_CONVERSATIONS: '250',
+      CLAUDE_API_CONTEXT_WARN_CHARS: '5000',
+      CLAUDE_API_CONTEXT_TARGET_CHARS: '7000',
       CLAUDE_API_BODY_LIMIT: '2mb',
       CLAUDE_API_CORS: 'true',
       CLAUDE_API_LOG_LEVEL: 'debug',
@@ -51,6 +59,10 @@ describe('config/env', () => {
       rateLimitWindowMs: 30000,
       rateLimitMaxRequests: 5,
       healthHistoryLimit: 50,
+      conversationTtlMs: 3600000,
+      maxConversations: 250,
+      contextWarnChars: 5000,
+      contextTargetChars: 7000,
       bodyLimit: '2mb',
       corsEnabled: true,
       logLevel: 'DEBUG',
@@ -97,5 +109,30 @@ describe('config/env', () => {
   it('throws when health history limit is below minimum', async () => {
     process.env = { CLAUDE_API_HEALTH_HISTORY_LIMIT: '0' }
     await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_HEALTH_HISTORY_LIMIT must be at least 1')
+  })
+
+  it('throws when conversation ttl is below minimum', async () => {
+    process.env = { CLAUDE_API_CONVERSATION_TTL_SECONDS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_CONVERSATION_TTL_SECONDS must be at least 1 second')
+  })
+
+  it('throws when max conversations is below minimum', async () => {
+    process.env = { CLAUDE_API_MAX_CONVERSATIONS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_MAX_CONVERSATIONS must be at least 1')
+  })
+
+  it('throws when context warn chars is below minimum', async () => {
+    process.env = { CLAUDE_API_CONTEXT_WARN_CHARS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_CONTEXT_WARN_CHARS must be at least 1')
+  })
+
+  it('throws when context target chars is lower than warn chars', async () => {
+    process.env = {
+      CLAUDE_API_CONTEXT_WARN_CHARS: '5000',
+      CLAUDE_API_CONTEXT_TARGET_CHARS: '4000'
+    }
+    await expect(import('../../src/config/env')).rejects.toThrow(
+      'CLAUDE_API_CONTEXT_TARGET_CHARS must be greater than or equal to CLAUDE_API_CONTEXT_WARN_CHARS'
+    )
   })
 })

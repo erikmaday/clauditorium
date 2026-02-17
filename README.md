@@ -149,6 +149,7 @@ Any endpoint, request/response shape, status code, or auth requirement change mu
 |----------|--------|-------------|
 | `/ask` | POST | Send a prompt, get a response |
 | `/chat` | POST | Chat with persistent `conversation_id` context |
+| `/chat/:conversation_id` | DELETE | Delete conversation from in-memory store |
 | `/models` | GET | List available Claude models discovered from local CLI binary |
 | `/health` | GET | Health check |
 | `/health/history` | GET | Recent Claude CLI readiness check history |
@@ -186,11 +187,7 @@ Start a new conversation (response returns `conversation_id`):
 curl -X POST http://localhost:5051/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "messages": [
-      {"role": "user", "content": "Hello!"},
-      {"role": "assistant", "content": "Hi! How can I help?"},
-      {"role": "user", "content": "What is 2+2?"}
-    ],
+    "message": "Hello! What is 2+2?",
     "system": "You are a helpful assistant.",
     "model": "claude-sonnet-4-5-20250929"
   }'
@@ -208,6 +205,13 @@ curl -X POST http://localhost:5051/chat \
 ```
 
 If `conversation_id` is unknown/expired, `/chat` returns `400 validation_error`.
+`/chat` responses include lifecycle and context metadata (`conversation`, `context`) on every successful call.
+
+### DELETE /chat/:conversation_id
+
+```bash
+curl -X DELETE http://localhost:5051/chat/YOUR_CONVERSATION_ID
+```
 
 ### GET /models
 
@@ -317,6 +321,10 @@ Set these environment variables to customize behavior:
 | `CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS` | `60` | Per-IP rate-limit window for `/ask` and `/chat` (seconds) |
 | `CLAUDE_API_RATE_LIMIT_MAX_REQUESTS` | `0` | Max requests per IP per window (`0` disables rate limiting) |
 | `CLAUDE_API_HEALTH_HISTORY_LIMIT` | `25` | Max readiness entries retained in memory |
+| `CLAUDE_API_CONVERSATION_TTL_SECONDS` | `86400` | Conversation inactivity TTL (seconds) |
+| `CLAUDE_API_MAX_CONVERSATIONS` | `1000` | Max stored conversations in memory before oldest inactive eviction |
+| `CLAUDE_API_CONTEXT_WARN_CHARS` | `80000` | Soft warning threshold for conversation context size |
+| `CLAUDE_API_CONTEXT_TARGET_CHARS` | `120000` | Soft target threshold for conversation context size |
 | `CLAUDE_API_BODY_LIMIT` | `1mb` | Max JSON request body size |
 | `CLAUDE_API_CORS` | `false` | Enable CORS |
 | `CLAUDE_API_LOG_LEVEL` | `INFO` | Log level |

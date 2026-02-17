@@ -85,7 +85,7 @@ paths:
   /chat:
     post:
       summary: Send chat input and receive the next assistant message with persistent conversation context
-      description: Start with `messages` to create a conversation, then continue with `conversation_id` + `message`.
+      description: Start with `message` to create a conversation, then continue with `conversation_id` + `message`.
       tags: [Chat]
       security:
         - ApiKeyAuth: []
@@ -97,15 +97,9 @@ paths:
               $ref: '#/components/schemas/ChatRequest'
             examples:
               startConversation:
-                summary: Start a conversation with history
+                summary: Start a conversation
                 value:
-                  messages:
-                    - role: user
-                      content: My name is Erik.
-                    - role: assistant
-                      content: Nice to meet you, Erik.
-                    - role: user
-                      content: What did I just tell you?
+                  message: My name is Erik.
                   system: You are concise.
               continueConversation:
                 summary: Continue existing conversation
@@ -164,6 +158,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /chat/{conversation_id}:
+    delete:
+      summary: Delete a conversation from in-memory store
+      tags: [Chat]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: conversation_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatDeleteResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
   /health:
     get:
       summary: Get health and readiness status
@@ -303,37 +337,70 @@ components:
           type: string
     ChatRequest:
       type: object
-      anyOf:
-        - required: [messages]
-        - required: [message]
+      required: [message]
       properties:
-        messages:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/Message'
-          description: Full history to append to conversation context for this call.
         message:
           type: string
-          description: Single user message for continuation calls.
+          description: User message for either conversation creation or continuation.
         conversation_id:
           type: string
           description: Existing conversation ID from prior /chat response.
         system:
           type: string
+          description: Optional system prompt. Allowed only when creating a new conversation.
         model:
           type: string
       additionalProperties: false
-      description: Provide at least one of messages or message.
+      description: Provide `message`; include `conversation_id` when continuing an existing conversation.
+    ChatConversationMeta:
+      type: object
+      required: [id, created_at, updated_at, expires_at]
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ChatContextMeta:
+      type: object
+      required: [chars_used, warn_chars, target_chars, over_warn, over_target]
+      properties:
+        chars_used:
+          type: integer
+        warn_chars:
+          type: integer
+        target_chars:
+          type: integer
+        over_warn:
+          type: boolean
+        over_target:
+          type: boolean
     ChatResponse:
       type: object
-      required: [success, conversation_id, message]
+      required: [success, conversation_id, message, conversation, context]
       example:
         success: true
         conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
         message:
           role: assistant
           content: You told me your name is Erik.
+        conversation:
+          id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+          created_at: 2026-01-01T00:00:00.000Z
+          updated_at: 2026-01-01T00:00:10.000Z
+          expires_at: 2026-01-02T00:00:10.000Z
+        context:
+          chars_used: 220
+          warn_chars: 80000
+          target_chars: 120000
+          over_warn: false
+          over_target: false
       properties:
         success:
           type: boolean
@@ -342,6 +409,23 @@ components:
           type: string
         message:
           $ref: '#/components/schemas/Message'
+        conversation:
+          $ref: '#/components/schemas/ChatConversationMeta'
+        context:
+          $ref: '#/components/schemas/ChatContextMeta'
+    ChatDeleteResponse:
+      type: object
+      required: [success, conversation_id, deleted, request_id]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        conversation_id:
+          type: string
+        deleted:
+          type: boolean
+        request_id:
+          type: string
     ModelsResponse:
       type: object
       required: [count, models]

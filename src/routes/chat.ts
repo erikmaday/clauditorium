@@ -1,8 +1,15 @@
 import { Router, Request, Response } from 'express'
 import { runClaude } from '../clients/claudeCli'
 import { normalizeCliError, ValidationError } from '../core/errors'
+import { config } from '../config/env'
 import { formatChatPrompt } from '../services/chatPrompt'
-import { createConversation, getConversation, saveConversation } from '../services/conversationStore'
+import {
+  ConversationState,
+  createConversation,
+  deleteConversation,
+  getConversation,
+  saveConversation
+} from '../services/conversationStore'
 import { parseChatRequest } from './schemas'
 
 const chatRouter = Router()
@@ -10,25 +17,24 @@ const chatRouter = Router()
 chatRouter.post('/', async (req: Request, res: Response) => {
   try {
     const body = parseChatRequest(req.body)
-    const existingConversation = body.conversationId ? getConversation(body.conversationId) : undefined
-    if (body.conversationId && !existingConversation) {
-      throw new ValidationError('conversation_id was not found')
-    }
+    let workingConversation: ConversationState
 
-    const workingConversation = existingConversation
-      ? {
-          id: existingConversation.id,
-          system: body.system ?? existingConversation.system,
-          messages: [...existingConversation.messages]
-        }
-      : createConversation({ system: body.system, messages: [] })
+    if (body.conversationId) {
+      const existingConversation = getConversation(body.conversationId)
+      if (!existingConversation) {
+        throw new ValidationError('conversation_id was not found')
+      }
 
-    if (body.messages) {
-      workingConversation.messages.push(...body.messages)
-    }
-
-    if (body.message) {
+      workingConversation = {
+        ...existingConversation,
+        messages: [...existingConversation.messages]
+      }
       workingConversation.messages.push({ role: 'user', content: body.message })
+    } else {
+      workingConversation = createConversation({
+        system: body.system,
+        message: { role: 'user', content: body.message }
+      })
     }
 
     const prompt = formatChatPrompt(workingConversation.messages, workingConversation.system)
@@ -39,7 +45,20 @@ chatRouter.post('/', async (req: Request, res: Response) => {
     res.json({
       success: true,
       conversation_id: workingConversation.id,
-      message: { role: 'assistant', content: response }
+      message: { role: 'assistant', content: response },
+      conversation: {
+        id: workingConversation.id,
+        created_at: workingConversation.createdAt,
+        updated_at: workingConversation.updatedAt,
+        expires_at: workingConversation.expiresAt
+      },
+      context: {
+        chars_used: workingConversation.charsUsed,
+        warn_chars: config.contextWarnChars,
+        target_chars: config.contextTargetChars,
+        over_warn: workingConversation.charsUsed >= config.contextWarnChars,
+        over_target: workingConversation.charsUsed >= config.contextTargetChars
+      }
     })
   } catch (err) {
     if (err instanceof ValidationError) {
@@ -59,6 +78,30 @@ chatRouter.post('/', async (req: Request, res: Response) => {
       request_id: error.request_id
     })
   }
+})
+
+chatRouter.delete('/:conversation_id', (req: Request, res: Response) => {
+  const conversationIdValue = req.params.conversation_id
+  const conversationId = Array.isArray(conversationIdValue)
+    ? conversationIdValue[0]
+    : conversationIdValue
+
+  if (!conversationId || conversationId.trim().length === 0) {
+    res.status(400).json({
+      error: 'validation_error',
+      message: 'conversation_id path parameter is required',
+      request_id: req.requestId
+    })
+    return
+  }
+
+  const deleted = deleteConversation(conversationId)
+  res.json({
+    success: true,
+    conversation_id: conversationId,
+    deleted,
+    request_id: req.requestId
+  })
 })
 
 export { chatRouter }

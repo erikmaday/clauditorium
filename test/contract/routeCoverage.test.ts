@@ -19,7 +19,8 @@ function getRuntimeOperations(): Set<string> {
         continue
       }
 
-      operations.add(`${method.toUpperCase()} ${endpoint.path}`)
+      const normalizedPath = endpoint.path.replace(/:([A-Za-z0-9_]+)/g, '{$1}')
+      operations.add(`${method.toUpperCase()} ${normalizedPath}`)
     }
   }
 

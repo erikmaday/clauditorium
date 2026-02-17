@@ -12,6 +12,7 @@ function printBanner(): void {
   console.log(`\nEndpoints:`)
   console.log(`  POST /ask     - Simple prompt/response`)
   console.log(`  POST /chat    - Chat with persistent context`)
+  console.log(`  DELETE /chat/:conversation_id - Delete stored conversation`)
   console.log(`  GET  /models  - Available Claude models`)
   console.log(`  GET  /health  - Health check`)
   console.log(`  GET  /health/history - Readiness check history`)

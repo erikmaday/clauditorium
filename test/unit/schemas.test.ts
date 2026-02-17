@@ -16,24 +16,25 @@ describe('parseAskRequest', () => {
 describe('parseChatRequest', () => {
   it('parses valid chat request', () => {
     const result = parseChatRequest({
-      messages: [{ role: 'user', content: 'Hello' }],
+      message: 'Hello',
       system: 'Stay brief',
       model: 'claude-haiku'
     })
 
     expect(result).toEqual({
-      messages: [{ role: 'user', content: 'Hello' }],
+      message: 'Hello',
+      conversationId: undefined,
       system: 'Stay brief',
       model: 'claude-haiku'
     })
   })
 
-  it('throws when messages is empty', () => {
-    expect(() => parseChatRequest({ messages: [] })).toThrow(ValidationError)
+  it('throws when messages is provided', () => {
+    expect(() => parseChatRequest({ messages: [{ role: 'user', content: 'Hello' }] })).toThrow(ValidationError)
   })
 
-  it('throws when a message has empty content', () => {
-    expect(() => parseChatRequest({ messages: [{ role: 'user', content: '' }] })).toThrow(ValidationError)
+  it('throws when message is empty', () => {
+    expect(() => parseChatRequest({ message: '' })).toThrow(ValidationError)
   })
 
   it('parses continuation request with conversation_id + message', () => {
@@ -45,13 +46,20 @@ describe('parseChatRequest', () => {
     expect(result).toEqual({
       conversationId: 'conv-123',
       message: 'next question',
-      messages: undefined,
       system: undefined,
       model: undefined
     })
   })
 
-  it('throws when neither messages nor message is provided', () => {
+  it('throws when message is not provided', () => {
     expect(() => parseChatRequest({ conversation_id: 'conv-123' })).toThrow(ValidationError)
+  })
+
+  it('throws when system is provided for continuation request', () => {
+    expect(() => parseChatRequest({
+      conversation_id: 'conv-123',
+      message: 'next question',
+      system: 'ignored'
+    })).toThrow(ValidationError)
   })
 })

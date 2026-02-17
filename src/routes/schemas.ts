@@ -1,5 +1,5 @@
 import { ValidationError } from '../core/errors'
-import { AskRequest, ChatRequest, Message } from '../types/api'
+import { AskRequest, ChatRequest } from '../types/api'
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
@@ -15,25 +15,6 @@ function parseModel(value: unknown): string | undefined {
   }
 
   return value
-}
-
-function parseMessage(value: unknown): Message {
-  if (!value || typeof value !== 'object') {
-    throw new ValidationError('each message must be an object')
-  }
-
-  const role = (value as Record<string, unknown>).role
-  const content = (value as Record<string, unknown>).content
-
-  if (!isNonEmptyString(role)) {
-    throw new ValidationError('each message.role must be a non-empty string')
-  }
-
-  if (!isNonEmptyString(content)) {
-    throw new ValidationError('each message.content must be a non-empty string')
-  }
-
-  return { role, content }
 }
 
 export function parseAskRequest(body: unknown): AskRequest {
@@ -58,8 +39,8 @@ export function parseChatRequest(body: unknown): ChatRequest {
   }
 
   const messagesValue = (body as Record<string, unknown>).messages
-  if (messagesValue !== undefined && (!Array.isArray(messagesValue) || messagesValue.length === 0)) {
-    throw new ValidationError('messages must be a non-empty array when provided')
+  if (messagesValue !== undefined) {
+    throw new ValidationError('messages is no longer supported; use message and optional conversation_id')
   }
 
   const systemValue = (body as Record<string, unknown>).system
@@ -77,13 +58,16 @@ export function parseChatRequest(body: unknown): ChatRequest {
     throw new ValidationError('conversation_id must be a non-empty string when provided')
   }
 
-  if (messagesValue === undefined && messageValue === undefined) {
-    throw new ValidationError('provide either messages or message')
+  if (messageValue === undefined) {
+    throw new ValidationError('message is required')
+  }
+
+  if (conversationIdValue !== undefined && systemValue !== undefined) {
+    throw new ValidationError('system is only allowed when starting a new conversation')
   }
 
   return {
-    messages: Array.isArray(messagesValue) ? messagesValue.map(parseMessage) : undefined,
-    message: messageValue as string | undefined,
+    message: messageValue as string,
     conversationId: conversationIdValue as string | undefined,
     system: systemValue as string | undefined,
     model: parseModel((body as Record<string, unknown>).model)

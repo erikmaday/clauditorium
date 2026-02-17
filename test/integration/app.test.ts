@@ -74,7 +74,7 @@ describe('app integration', () => {
 
   it('validates /chat body', async () => {
     const app = createApp()
-    const response = await request(app).post('/chat').send({ messages: [] })
+    const response = await request(app).post('/chat').send({})
 
     expect(response.status).toBe(400)
     expect(response.body.error).toBe('validation_error')
@@ -114,14 +114,27 @@ describe('app integration', () => {
 
     const app = createApp()
     const response = await request(app).post('/chat').send({
-      messages: [{ role: 'user', content: 'hello' }]
+      message: 'hello'
     })
 
     expect(response.status).toBe(200)
     expect(response.body).toEqual({
       success: true,
       conversation_id: expect.any(String),
-      message: { role: 'assistant', content: 'chat reply' }
+      message: { role: 'assistant', content: 'chat reply' },
+      conversation: {
+        id: expect.any(String),
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+        expires_at: expect.any(String)
+      },
+      context: {
+        chars_used: expect.any(Number),
+        warn_chars: expect.any(Number),
+        target_chars: expect.any(Number),
+        over_warn: expect.any(Boolean),
+        over_target: expect.any(Boolean)
+      }
     })
   })
 
@@ -131,7 +144,7 @@ describe('app integration', () => {
 
     const app = createApp()
     const first = await request(app).post('/chat').send({
-      messages: [{ role: 'user', content: 'hello' }]
+      message: 'hello'
     })
 
     expect(first.status).toBe(200)
@@ -149,6 +162,36 @@ describe('app integration', () => {
     expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('User: hello')
     expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('Assistant: first reply')
     expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('User: follow up')
+  })
+
+  it('deletes conversation by id', async () => {
+    mockedRunClaude.mockResolvedValueOnce('first reply')
+
+    const app = createApp()
+    const createResponse = await request(app).post('/chat').send({ message: 'hello' })
+    const deleteResponse = await request(app).delete(`/chat/${createResponse.body.conversation_id}`)
+    const deleteMissingResponse = await request(app).delete(`/chat/${createResponse.body.conversation_id}`)
+
+    expect(deleteResponse.status).toBe(200)
+    expect(deleteResponse.body.success).toBe(true)
+    expect(deleteResponse.body.deleted).toBe(true)
+    expect(deleteResponse.body.conversation_id).toBe(createResponse.body.conversation_id)
+
+    expect(deleteMissingResponse.status).toBe(200)
+    expect(deleteMissingResponse.body.deleted).toBe(false)
+  })
+
+  it('returns validation error when system is sent with conversation_id', async () => {
+    const app = createApp()
+    const response = await request(app).post('/chat').send({
+      conversation_id: 'conv-123',
+      message: 'hello?',
+      system: 'should fail'
+    })
+
+    expect(response.status).toBe(400)
+    expect(response.body.error).toBe('validation_error')
+    expect(response.body.message).toBe('system is only allowed when starting a new conversation')
   })
 
   it('returns validation error when conversation_id is unknown', async () => {
@@ -173,7 +216,7 @@ describe('app integration', () => {
 
     const app = createApp()
     const response = await request(app).post('/chat').send({
-      messages: [{ role: 'user', content: 'hello' }]
+      message: 'hello'
     })
 
     expect(response.status).toBe(500)

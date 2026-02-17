@@ -98,6 +98,42 @@ if (healthHistoryLimit < 1) {
   throw new ValidationError('CLAUDE_API_HEALTH_HISTORY_LIMIT must be at least 1')
 }
 
+const conversationTtlSeconds = parseIntegerEnv(
+  process.env.CLAUDE_API_CONVERSATION_TTL_SECONDS,
+  24 * 60 * 60,
+  'CLAUDE_API_CONVERSATION_TTL_SECONDS'
+)
+if (conversationTtlSeconds < 1) {
+  throw new ValidationError('CLAUDE_API_CONVERSATION_TTL_SECONDS must be at least 1 second')
+}
+
+const maxConversations = parseIntegerEnv(
+  process.env.CLAUDE_API_MAX_CONVERSATIONS,
+  1000,
+  'CLAUDE_API_MAX_CONVERSATIONS'
+)
+if (maxConversations < 1) {
+  throw new ValidationError('CLAUDE_API_MAX_CONVERSATIONS must be at least 1')
+}
+
+const contextWarnChars = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_WARN_CHARS,
+  80_000,
+  'CLAUDE_API_CONTEXT_WARN_CHARS'
+)
+if (contextWarnChars < 1) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_WARN_CHARS must be at least 1')
+}
+
+const contextTargetChars = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_TARGET_CHARS,
+  120_000,
+  'CLAUDE_API_CONTEXT_TARGET_CHARS'
+)
+if (contextTargetChars < contextWarnChars) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_TARGET_CHARS must be greater than or equal to CLAUDE_API_CONTEXT_WARN_CHARS')
+}
+
 export const config = {
   host: process.env.CLAUDE_API_HOST || '127.0.0.1',
   port,
@@ -106,6 +142,10 @@ export const config = {
   rateLimitWindowMs: rateLimitWindowSeconds * 1000,
   rateLimitMaxRequests,
   healthHistoryLimit,
+  conversationTtlMs: conversationTtlSeconds * 1000,
+  maxConversations,
+  contextWarnChars,
+  contextTargetChars,
   bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),
   corsEnabled: parseBooleanEnv(process.env.CLAUDE_API_CORS),
   strictHealth: parseBooleanEnv(process.env.CLAUDE_API_STRICT_HEALTH),

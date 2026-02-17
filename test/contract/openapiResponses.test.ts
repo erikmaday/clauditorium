@@ -20,7 +20,7 @@ async function createFreshApp() {
   return createApp()
 }
 
-function expectOpenApi(path: string, method: 'get' | 'post', status: number, body: unknown): void {
+function expectOpenApi(path: string, method: 'get' | 'post' | 'delete', status: number, body: unknown): void {
   const validation = validateOpenApiResponse(path, method, status, body)
   expect(validation, validation?.message).toBeUndefined()
 }
@@ -115,7 +115,7 @@ describe('OpenAPI response contract', () => {
     mockedRunClaude.mockResolvedValueOnce('chat reply')
     const app = await createFreshApp()
 
-    const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hi' }] })
+    const response = await request(app).post('/chat').send({ message: 'hi' })
 
     expect(response.status).toBe(200)
     expect(response.body.conversation_id).toBeTypeOf('string')
@@ -127,7 +127,7 @@ describe('OpenAPI response contract', () => {
     mockedRunClaude.mockResolvedValueOnce('second')
     const app = await createFreshApp()
 
-    const first = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hi' }] })
+    const first = await request(app).post('/chat').send({ message: 'hi' })
     const second = await request(app).post('/chat').send({
       conversation_id: first.body.conversation_id,
       message: 'follow up'
@@ -140,7 +140,7 @@ describe('OpenAPI response contract', () => {
 
   it('validates /chat 400', async () => {
     const app = await createFreshApp()
-    const response = await request(app).post('/chat').send({ messages: [] })
+    const response = await request(app).post('/chat').send({})
 
     expect(response.status).toBe(400)
     expectOpenApi('/chat', 'post', response.status, response.body)
@@ -150,7 +150,7 @@ describe('OpenAPI response contract', () => {
     process.env = { ...ORIGINAL_ENV, CLAUDE_API_KEY: 'secret' }
     const app = await createFreshApp()
 
-    const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hello' }] })
+    const response = await request(app).post('/chat').send({ message: 'hello' })
 
     expect(response.status).toBe(401)
     expectOpenApi('/chat', 'post', response.status, response.body)
@@ -161,7 +161,7 @@ describe('OpenAPI response contract', () => {
     const app = await createFreshApp()
 
     const response = await request(app).post('/chat').send({
-      messages: [{ role: 'user', content: 'x'.repeat(2048) }]
+      message: 'x'.repeat(2048)
     })
 
     expect(response.status).toBe(413)
@@ -178,8 +178,8 @@ describe('OpenAPI response contract', () => {
     mockedRunClaude.mockResolvedValue('ok')
     const app = await createFreshApp()
 
-    await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'one' }] })
-    const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'two' }] })
+    await request(app).post('/chat').send({ message: 'one' })
+    const response = await request(app).post('/chat').send({ message: 'two' })
 
     expect(response.status).toBe(429)
     expectOpenApi('/chat', 'post', response.status, response.body)
@@ -194,7 +194,7 @@ describe('OpenAPI response contract', () => {
     })
     const app = await createFreshApp()
 
-    const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hello' }] })
+    const response = await request(app).post('/chat').send({ message: 'hello' })
 
     expect(response.status).toBe(500)
     expectOpenApi('/chat', 'post', response.status, response.body)
@@ -209,10 +209,21 @@ describe('OpenAPI response contract', () => {
     })
     const app = await createFreshApp()
 
-    const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hello' }] })
+    const response = await request(app).post('/chat').send({ message: 'hello' })
 
     expect(response.status).toBe(504)
     expectOpenApi('/chat', 'post', response.status, response.body)
+  })
+
+  it('validates /chat/{conversation_id} delete 200', async () => {
+    mockedRunClaude.mockResolvedValueOnce('chat reply')
+    const app = await createFreshApp()
+
+    const created = await request(app).post('/chat').send({ message: 'hi' })
+    const deleted = await request(app).delete(`/chat/${created.body.conversation_id}`)
+
+    expect(deleted.status).toBe(200)
+    expectOpenApi('/chat/{conversation_id}', 'delete', deleted.status, deleted.body)
   })
 
   it('validates /health 200 and /health 503', async () => {
