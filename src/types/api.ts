@@ -96,6 +96,14 @@ export interface ClaudeCliReadinessData {
 export interface ProcessObservabilityData {
   started_at: string
   uptime_seconds: number
+  claude_runtime: {
+    active_requests: number
+    queued_requests: number
+    max_concurrent: number
+    max_queue: number
+    rejected_total: number
+    queue_timeouts_total: number
+  }
 }
 
 export interface HealthResponse {

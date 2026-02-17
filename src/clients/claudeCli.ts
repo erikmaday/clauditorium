@@ -3,6 +3,7 @@ import { config, CLAUDE_SPAWN_ENV_BLOCKLIST } from '../config/env'
 import { log } from '../core/logger'
 import { createCliError } from '../core/errors'
 import { mkdirSync } from 'fs'
+import { enqueueClaudeTask } from '../services/claudeRuntimeQueue'
 
 function buildClaudeSpawnEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
@@ -15,7 +16,7 @@ function buildClaudeSpawnEnv(): NodeJS.ProcessEnv {
 }
 
 export function runClaude(prompt: string, requestId: string, model?: string): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return enqueueClaudeTask(requestId, () => new Promise((resolve, reject) => {
     const args = ['-p', prompt]
 
     if (model) {
@@ -88,5 +89,5 @@ export function runClaude(prompt: string, requestId: string, model?: string): Pr
       log('ERROR', `[${requestId}] Failed to spawn Claude CLI: ${err.message}`)
       reject(createCliError(500, 'spawn_error', `Failed to spawn Claude CLI: ${err.message}`, requestId))
     })
-  })
+  }))
 }

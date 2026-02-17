@@ -2,6 +2,14 @@ import request from 'supertest'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const ORIGINAL_ENV = process.env
+const TEST_CLAUDE_RUNTIME = {
+  active_requests: 0,
+  queued_requests: 0,
+  max_concurrent: 4,
+  max_queue: 100,
+  rejected_total: 0,
+  queue_timeouts_total: 0
+}
 
 afterEach(() => {
   process.env = ORIGINAL_ENV
@@ -55,7 +63,8 @@ async function loadAppWithMockedReadiness(
     getClaudeCliReadinessHistory: () => [],
     getProcessObservability: () => ({
       started_at: '2026-01-01T00:00:00.000Z',
-      uptime_seconds: 123.456
+      uptime_seconds: 123.456,
+      claude_runtime: TEST_CLAUDE_RUNTIME
     })
   }))
 
@@ -177,7 +186,11 @@ describe('runtime hardening', () => {
       checkClaudeCliReadiness,
       getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
       getClaudeCliReadinessHistory: () => [],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 123.456,
+        claude_runtime: TEST_CLAUDE_RUNTIME
+      })
     }))
     const { createApp } = await import('../../src/app')
     const app = createApp()
@@ -210,7 +223,11 @@ describe('runtime hardening', () => {
         version: 'claude 1.0.0'
       }),
       getClaudeCliReadinessHistory: () => [],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 123.456,
+        claude_runtime: TEST_CLAUDE_RUNTIME
+      })
     }))
     const { createApp } = await import('../../src/app')
     const app = createApp()
@@ -246,7 +263,11 @@ describe('runtime hardening', () => {
           error: 'claude not found'
         }
       ],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 123.456,
+        claude_runtime: TEST_CLAUDE_RUNTIME
+      })
     }))
     const { createApp } = await import('../../src/app')
     const app = createApp()
@@ -269,7 +290,11 @@ describe('runtime hardening', () => {
         { status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' },
         { status: 'not_ready', checked_at: '2026-01-01T00:05:00.000Z' }
       ],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 123.456,
+        claude_runtime: TEST_CLAUDE_RUNTIME
+      })
     }))
     const { createApp } = await import('../../src/app')
     const app = createApp()
@@ -287,7 +312,11 @@ describe('runtime hardening', () => {
       checkClaudeCliReadiness: vi.fn(),
       getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
       getClaudeCliReadinessHistory: () => [],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 123.456,
+        claude_runtime: TEST_CLAUDE_RUNTIME
+      })
     }))
     const { createApp } = await import('../../src/app')
     const app = createApp()

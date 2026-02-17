@@ -1,5 +1,6 @@
 import { spawnSync } from 'child_process'
 import { config } from '../config/env'
+import { getClaudeRuntimeStats } from './claudeRuntimeQueue'
 
 export interface ClaudeCliReadiness {
   status: 'ready' | 'not_ready' | 'unknown'
@@ -22,10 +23,22 @@ export function getClaudeCliReadiness(): ClaudeCliReadiness {
   return claudeCliReadiness
 }
 
-export function getProcessObservability(): { started_at: string, uptime_seconds: number } {
+export function getProcessObservability(): {
+  started_at: string
+  uptime_seconds: number
+  claude_runtime: {
+    active_requests: number
+    queued_requests: number
+    max_concurrent: number
+    max_queue: number
+    rejected_total: number
+    queue_timeouts_total: number
+  }
+} {
   return {
     started_at: processStartedAt,
-    uptime_seconds: Number(process.uptime().toFixed(3))
+    uptime_seconds: Number(process.uptime().toFixed(3)),
+    claude_runtime: getClaudeRuntimeStats()
   }
 }
 

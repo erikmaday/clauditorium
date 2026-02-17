@@ -108,6 +108,33 @@ if (rateLimitMaxRequests < 0) {
   throw new ValidationError('CLAUDE_API_RATE_LIMIT_MAX_REQUESTS must be 0 or greater')
 }
 
+const maxConcurrentClaudeRequests = parseIntegerEnv(
+  process.env.CLAUDE_API_MAX_CONCURRENT,
+  4,
+  'CLAUDE_API_MAX_CONCURRENT'
+)
+if (maxConcurrentClaudeRequests < 1) {
+  throw new ValidationError('CLAUDE_API_MAX_CONCURRENT must be at least 1')
+}
+
+const maxClaudeQueueSize = parseIntegerEnv(
+  process.env.CLAUDE_API_MAX_QUEUE,
+  100,
+  'CLAUDE_API_MAX_QUEUE'
+)
+if (maxClaudeQueueSize < 0) {
+  throw new ValidationError('CLAUDE_API_MAX_QUEUE must be 0 or greater')
+}
+
+const claudeQueueTimeoutMs = parseIntegerEnv(
+  process.env.CLAUDE_API_QUEUE_TIMEOUT_MS,
+  15000,
+  'CLAUDE_API_QUEUE_TIMEOUT_MS'
+)
+if (claudeQueueTimeoutMs < 1) {
+  throw new ValidationError('CLAUDE_API_QUEUE_TIMEOUT_MS must be at least 1')
+}
+
 const healthHistoryLimit = parseIntegerEnv(
   process.env.CLAUDE_API_HEALTH_HISTORY_LIMIT,
   25,
@@ -176,6 +203,9 @@ export const config = {
   port,
   timeoutMs: timeoutSeconds * 1000,
   startupCheckTimeoutMs: startupCheckTimeoutSeconds * 1000,
+  maxConcurrentClaudeRequests,
+  maxClaudeQueueSize,
+  claudeQueueTimeoutMs,
   rateLimitWindowMs: rateLimitWindowSeconds * 1000,
   rateLimitMaxRequests,
   healthHistoryLimit,

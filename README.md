@@ -286,6 +286,7 @@ If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
 ```
 
 `/health` now includes readiness details for Claude CLI. With `CLAUDE_API_STRICT_HEALTH=true`, `/health` returns `503` when Claude CLI is not ready.
+`/health` observability also includes Claude runtime queue metrics (`active_requests`, `queued_requests`, `rejected_total`, `queue_timeouts_total`).
 
 `GET /health/history` returns an in-memory rolling window of recent readiness checks for diagnostics.
 Use `GET /health/history?since=2026-01-01T00:00:00.000Z` to filter entries by timestamp.
@@ -301,6 +302,8 @@ Use `GET /health/history?since=2026-01-01T00:00:00.000Z` to filter entries by ti
 | `not_found` | `404` | No | Correct endpoint path/method |
 | `payload_too_large` | `413` | No | Reduce request payload size |
 | `rate_limited` | `429` | Yes (after delay) | Wait for window to reset; retry after `retry_after_seconds` |
+| `concurrency_limited` | `429` | Yes | Claude worker queue is full; retry shortly |
+| `queue_timeout` | `504` | Yes | Queue wait exceeded configured timeout; retry |
 | `timeout` | `504` | Yes | Retry with simpler prompt or higher timeout |
 | `cli_error` | `500` | Sometimes | Check Claude CLI stderr/auth/session |
 | `spawn_error` | `500` | Sometimes | Verify Claude CLI install and PATH |
@@ -329,6 +332,9 @@ Set these environment variables to customize behavior:
 | `CLAUDE_API_PORT` | `5051` | Server port |
 | `CLAUDE_API_TIMEOUT` | `120` | Request timeout (seconds) |
 | `CLAUDE_API_STARTUP_CHECK_TIMEOUT` | `5` | Startup timeout for Claude CLI readiness check (seconds) |
+| `CLAUDE_API_MAX_CONCURRENT` | `4` | Max concurrent Claude subprocesses |
+| `CLAUDE_API_MAX_QUEUE` | `100` | Max queued Claude requests waiting for a slot |
+| `CLAUDE_API_QUEUE_TIMEOUT_MS` | `15000` | Max queue wait time before request fails |
 | `CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS` | `60` | Per-IP rate-limit window for `/ask` and `/chat` (seconds) |
 | `CLAUDE_API_RATE_LIMIT_MAX_REQUESTS` | `0` | Max requests per IP per window (`0` disables rate limiting) |
 | `CLAUDE_API_HEALTH_HISTORY_LIMIT` | `25` | Max readiness entries retained in memory |

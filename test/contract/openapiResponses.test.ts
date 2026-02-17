@@ -239,7 +239,18 @@ describe('OpenAPI response contract', () => {
       checkClaudeCliReadiness: vi.fn(),
       getClaudeCliReadiness: () => ({ status: 'not_ready', checked_at: '2026-01-01T00:00:00.000Z' }),
       getClaudeCliReadinessHistory: () => [],
-      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 1 })
+      getProcessObservability: () => ({
+        started_at: '2026-01-01T00:00:00.000Z',
+        uptime_seconds: 1,
+        claude_runtime: {
+          active_requests: 0,
+          queued_requests: 0,
+          max_concurrent: 4,
+          max_queue: 100,
+          rejected_total: 0,
+          queue_timeouts_total: 0
+        }
+      })
     }))
 
     const { createApp: createStrictApp } = await import('../../src/app')

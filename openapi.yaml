@@ -466,13 +466,35 @@ components:
           type: string
     Observability:
       type: object
-      required: [started_at, uptime_seconds]
+      required: [started_at, uptime_seconds, claude_runtime]
       properties:
         started_at:
           type: string
           format: date-time
         uptime_seconds:
           type: number
+        claude_runtime:
+          type: object
+          required:
+            - active_requests
+            - queued_requests
+            - max_concurrent
+            - max_queue
+            - rejected_total
+            - queue_timeouts_total
+          properties:
+            active_requests:
+              type: integer
+            queued_requests:
+              type: integer
+            max_concurrent:
+              type: integer
+            max_queue:
+              type: integer
+            rejected_total:
+              type: integer
+            queue_timeouts_total:
+              type: integer
     HealthResponse:
       type: object
       required: [status, strict_mode, observability, readiness]

@@ -16,6 +16,9 @@ describe('config/env', () => {
     expect(config.port).toBe(5051)
     expect(config.timeoutMs).toBe(120000)
     expect(config.startupCheckTimeoutMs).toBe(5000)
+    expect(config.maxConcurrentClaudeRequests).toBe(4)
+    expect(config.maxClaudeQueueSize).toBe(100)
+    expect(config.claudeQueueTimeoutMs).toBe(15000)
     expect(config.rateLimitWindowMs).toBe(60000)
     expect(config.rateLimitMaxRequests).toBe(0)
     expect(config.healthHistoryLimit).toBe(25)
@@ -40,6 +43,9 @@ describe('config/env', () => {
       CLAUDE_API_PORT: '8080',
       CLAUDE_API_TIMEOUT: '30',
       CLAUDE_API_STARTUP_CHECK_TIMEOUT: '8',
+      CLAUDE_API_MAX_CONCURRENT: '6',
+      CLAUDE_API_MAX_QUEUE: '200',
+      CLAUDE_API_QUEUE_TIMEOUT_MS: '9000',
       CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS: '30',
       CLAUDE_API_RATE_LIMIT_MAX_REQUESTS: '5',
       CLAUDE_API_HEALTH_HISTORY_LIMIT: '50',
@@ -64,6 +70,9 @@ describe('config/env', () => {
       port: 8080,
       timeoutMs: 30000,
       startupCheckTimeoutMs: 8000,
+      maxConcurrentClaudeRequests: 6,
+      maxClaudeQueueSize: 200,
+      claudeQueueTimeoutMs: 9000,
       rateLimitWindowMs: 30000,
       rateLimitMaxRequests: 5,
       healthHistoryLimit: 50,
@@ -131,6 +140,21 @@ describe('config/env', () => {
   it('throws when max conversations is below minimum', async () => {
     process.env = { CLAUDE_API_MAX_CONVERSATIONS: '0' }
     await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_MAX_CONVERSATIONS must be at least 1')
+  })
+
+  it('throws when max concurrent is below minimum', async () => {
+    process.env = { CLAUDE_API_MAX_CONCURRENT: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_MAX_CONCURRENT must be at least 1')
+  })
+
+  it('throws when max queue is below minimum', async () => {
+    process.env = { CLAUDE_API_MAX_QUEUE: '-1' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_MAX_QUEUE must be 0 or greater')
+  })
+
+  it('throws when queue timeout is below minimum', async () => {
+    process.env = { CLAUDE_API_QUEUE_TIMEOUT_MS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_QUEUE_TIMEOUT_MS must be at least 1')
   })
 
   it('throws when context warn tokens is below minimum', async () => {
