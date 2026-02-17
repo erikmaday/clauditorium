@@ -84,6 +84,7 @@ Coverage thresholds are enforced in CI via `npm run test:coverage`.
 | `/ask` | POST | Send a prompt, get a response |
 | `/chat` | POST | Chat with message history |
 | `/health` | GET | Health check |
+| `/health/recheck` | POST | Re-run Claude CLI readiness check |
 | `/version` | GET | Version info |
 
 `/version` reports the package version from `package.json` at runtime.
@@ -129,6 +130,8 @@ If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
 ```
 
 `/health` now includes readiness details for Claude CLI. With `CLAUDE_API_STRICT_HEALTH=true`, `/health` returns `503` when Claude CLI is not ready.
+
+`POST /health/recheck` triggers a new Claude CLI readiness check without restarting the server. This endpoint requires `x-api-key` and returns `503` if `CLAUDE_API_KEY` is not configured.
 
 ## Configuration
 

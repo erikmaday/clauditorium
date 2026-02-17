@@ -29,18 +29,37 @@ async function loadAppWithMockedReadiness(
 ) {
   process.env = { ...ORIGINAL_ENV, CLAUDE_API_STRICT_HEALTH: strictHealth }
 
+  const checkClaudeCliReadiness = vi.fn(() => ({
+    status: readinessStatus,
+    checked_at: '2026-01-01T00:00:00.000Z',
+    check_duration_ms: 12.3,
+    exit_code: readinessStatus === 'ready' ? 0 : 1,
+    signal: null,
+    ...(readinessStatus === 'ready'
+      ? { version: 'claude 1.0.0' }
+      : { error: 'claude not found' })
+  }))
+
   vi.doMock('../../src/services/readiness', () => ({
+    checkClaudeCliReadiness,
     getClaudeCliReadiness: () => ({
       status: readinessStatus,
       checked_at: '2026-01-01T00:00:00.000Z',
+      check_duration_ms: 12.3,
+      exit_code: readinessStatus === 'ready' ? 0 : 1,
+      signal: null,
       ...(readinessStatus === 'ready'
         ? { version: 'claude 1.0.0' }
         : { error: 'claude not found' })
+    }),
+    getProcessObservability: () => ({
+      started_at: '2026-01-01T00:00:00.000Z',
+      uptime_seconds: 123.456
     })
   }))
 
   const { createApp } = await import('../../src/app')
-  return createApp()
+  return { app: createApp(), checkClaudeCliReadiness }
 }
 
 describe('runtime hardening', () => {
@@ -103,18 +122,19 @@ describe('runtime hardening', () => {
   })
 
   it('returns degraded health with 200 when strict mode is disabled', async () => {
-    const app = await loadAppWithMockedReadiness('not_ready', 'false')
+    const { app } = await loadAppWithMockedReadiness('not_ready', 'false')
 
     const response = await request(app).get('/health')
 
     expect(response.status).toBe(200)
     expect(response.body.status).toBe('degraded')
     expect(response.body.strict_mode).toBe(false)
+    expect(response.body.observability.started_at).toBe('2026-01-01T00:00:00.000Z')
     expect(response.body.readiness.claude_cli.status).toBe('not_ready')
   })
 
   it('returns degraded health with 503 when strict mode is enabled', async () => {
-    const app = await loadAppWithMockedReadiness('not_ready', 'true')
+    const { app } = await loadAppWithMockedReadiness('not_ready', 'true')
 
     const response = await request(app).get('/health')
 
@@ -122,5 +142,65 @@ describe('runtime hardening', () => {
     expect(response.body.status).toBe('degraded')
     expect(response.body.strict_mode).toBe(true)
     expect(response.body.readiness.claude_cli.status).toBe('not_ready')
+  })
+
+  it('rejects /health/recheck when CLAUDE_API_KEY is not configured', async () => {
+    const { app } = await loadAppWithMockedReadiness('ready', 'false')
+
+    const response = await request(app).post('/health/recheck')
+
+    expect(response.status).toBe(503)
+    expect(response.body.error).toBe('api_key_not_configured')
+  })
+
+  it('rejects /health/recheck with invalid API key', async () => {
+    process.env = { ...ORIGINAL_ENV, CLAUDE_API_KEY: 'secret-key' }
+    const checkClaudeCliReadiness = vi.fn()
+    vi.doMock('../../src/services/readiness', () => ({
+      checkClaudeCliReadiness,
+      getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
+      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+
+    const response = await request(app).post('/health/recheck').set('x-api-key', 'wrong')
+
+    expect(response.status).toBe(401)
+    expect(response.body.error).toBe('unauthorized')
+    expect(checkClaudeCliReadiness).not.toHaveBeenCalled()
+  })
+
+  it('runs readiness recheck when valid API key is provided', async () => {
+    process.env = { ...ORIGINAL_ENV, CLAUDE_API_KEY: 'secret-key' }
+    const checkClaudeCliReadiness = vi.fn(() => ({
+      status: 'ready',
+      checked_at: '2026-01-01T00:00:00.000Z',
+      check_duration_ms: 10.2,
+      exit_code: 0,
+      signal: null,
+      version: 'claude 1.0.0'
+    }))
+    vi.doMock('../../src/services/readiness', () => ({
+      checkClaudeCliReadiness,
+      getClaudeCliReadiness: () => ({
+        status: 'ready',
+        checked_at: '2026-01-01T00:00:00.000Z',
+        check_duration_ms: 10.2,
+        exit_code: 0,
+        signal: null,
+        version: 'claude 1.0.0'
+      }),
+      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+
+    const response = await request(app).post('/health/recheck').set('x-api-key', 'secret-key')
+
+    expect(response.status).toBe(200)
+    expect(response.body.status).toBe('ok')
+    expect(response.body.readiness.claude_cli.check_duration_ms).toBe(10.2)
+    expect(checkClaudeCliReadiness).toHaveBeenCalledOnce()
   })
 })

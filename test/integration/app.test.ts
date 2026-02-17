@@ -22,6 +22,8 @@ describe('app integration', () => {
     expect(response.status).toBe(200)
     expect(response.body.status).toBe('ok')
     expect(response.body).toHaveProperty('strict_mode')
+    expect(response.body).toHaveProperty('observability.started_at')
+    expect(response.body).toHaveProperty('observability.uptime_seconds')
     expect(response.body).toHaveProperty('readiness.claude_cli')
   })
 

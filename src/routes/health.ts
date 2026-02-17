@@ -1,21 +1,41 @@
 import { Router, Request, Response } from 'express'
 import { config } from '../config/env'
-import { getClaudeCliReadiness } from '../services/readiness'
+import { strictApiKeyMiddleware } from '../middleware/apiKey'
+import {
+  checkClaudeCliReadiness,
+  getClaudeCliReadiness,
+  getProcessObservability
+} from '../services/readiness'
 
 const healthRouter = Router()
 
-healthRouter.get('/', (_req: Request, res: Response) => {
+function buildHealthResponse(): { statusCode: number, payload: unknown } {
   const readiness = getClaudeCliReadiness()
   const strictFailure = config.strictHealth && readiness.status === 'not_ready'
   const healthStatus = readiness.status === 'not_ready' ? 'degraded' : 'ok'
 
-  res.status(strictFailure ? 503 : 200).json({
-    status: healthStatus,
-    strict_mode: config.strictHealth,
-    readiness: {
-      claude_cli: readiness
+  return {
+    statusCode: strictFailure ? 503 : 200,
+    payload: {
+      status: healthStatus,
+      strict_mode: config.strictHealth,
+      observability: getProcessObservability(),
+      readiness: {
+        claude_cli: readiness
+      }
     }
-  })
+  }
+}
+
+healthRouter.get('/', (_req: Request, res: Response) => {
+  const { statusCode, payload } = buildHealthResponse()
+  res.status(statusCode).json(payload)
+})
+
+healthRouter.post('/recheck', strictApiKeyMiddleware, (_req: Request, res: Response) => {
+  checkClaudeCliReadiness()
+  const { statusCode, payload } = buildHealthResponse()
+  res.status(statusCode).json(payload)
 })
 
 export { healthRouter }
