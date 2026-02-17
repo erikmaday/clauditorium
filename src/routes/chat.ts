@@ -123,7 +123,7 @@ chatRouter.delete('/:conversation_id', (req: Request, res: Response<DeleteConver
     success: true,
     conversation_id: conversationId,
     deleted,
-    request_id: req.requestId
+    request_id: req.requestId || 'unknown'
   }
   res.json(payload)
 })

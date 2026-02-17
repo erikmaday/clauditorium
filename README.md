@@ -133,6 +133,7 @@ One-command smoke test script (expects image exposing port `5051`):
 
 OpenAPI contract correctness is CI-gated with strict enforcement:
 
+- `npm run openapi:types:check` verifies generated TS types from `openapi.yaml` are up to date
 - `npm run openapi:lint` validates spec quality and structure
 - `npm run openapi:validate` performs full OpenAPI schema validation
 - `npm run contract:test` verifies runtime routes and response payloads against `openapi.yaml`
@@ -144,6 +145,12 @@ npm run api:contract:check
 ```
 
 Any endpoint, request/response shape, status code, or auth requirement change must include matching updates to `openapi.yaml` and contract tests in the same PR.
+
+OpenAPI is the source of truth. Regenerate TypeScript contract types after spec changes with:
+
+```bash
+npm run openapi:types:generate
+```
 
 ## API Endpoints
 
