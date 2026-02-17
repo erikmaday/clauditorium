@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.1] - 2026-02-17
+
+### Fixed
+- OpenAPI 3.0 schema compliance for `/chat` request examples by moving examples to a valid requestBody media-type location.
+- Restored `npm run openapi:validate` success in CI/local checks.
+
 ## [1.2.0] - 2026-02-17
 
 ### Added

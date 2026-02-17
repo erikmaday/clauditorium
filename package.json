@@ -1,6 +1,6 @@
 {
   "name": "clauditorium",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "REST API wrapper for the Claude CLI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
