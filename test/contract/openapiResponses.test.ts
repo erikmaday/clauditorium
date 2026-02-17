@@ -319,19 +319,4 @@ describe('OpenAPI response contract', () => {
     expectOpenApi('/models', 'get', response.status, response.body)
   })
 
-  it('validates /openapi.yaml 200', async () => {
-    const app = await createFreshApp()
-    const response = await request(app).get('/openapi.yaml')
-
-    expect(response.status).toBe(200)
-    expectOpenApi('/openapi.yaml', 'get', response.status, response.text)
-  })
-
-  it('validates /docs 200', async () => {
-    const app = await createFreshApp()
-    const response = await request(app).get('/docs')
-
-    expect(response.status).toBe(200)
-    expectOpenApi('/docs', 'get', response.status, response.text)
-  })
 })

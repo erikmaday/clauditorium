@@ -1,16 +1,26 @@
 openapi: 3.0.3
 info:
   title: Clauditorium API
-  version: 1.1.1
+  version: 1.2.0
   description: REST API wrapper around Claude CLI.
 servers:
   - url: http://127.0.0.1:5051
+tags:
+  - name: Prompt
+    description: Single-prompt Claude interactions.
+  - name: Chat
+    description: Multi-turn chat operations.
+  - name: Health
+    description: Readiness, health status, and diagnostics.
+  - name: Meta
+    description: Service metadata and discovery endpoints.
 security:
   - ApiKeyAuth: []
 paths:
   /ask:
     post:
       summary: Send a single prompt to Claude
+      tags: [Prompt]
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -76,6 +86,7 @@ paths:
     post:
       summary: Send chat input and receive the next assistant message with persistent conversation context
       description: Start with `messages` to create a conversation, then continue with `conversation_id` + `message`.
+      tags: [Chat]
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -139,6 +150,7 @@ paths:
   /health:
     get:
       summary: Get health and readiness status
+      tags: [Health]
       security: []
       responses:
         '200':
@@ -156,6 +168,7 @@ paths:
   /health/history:
     get:
       summary: Get recent Claude CLI readiness checks
+      tags: [Health]
       security: []
       parameters:
         - in: query
@@ -181,6 +194,7 @@ paths:
   /health/recheck:
     post:
       summary: Trigger a new Claude CLI readiness check
+      tags: [Health]
       security:
         - ApiKeyAuth: []
       responses:
@@ -207,6 +221,7 @@ paths:
   /version:
     get:
       summary: Get runtime version/config summary
+      tags: [Meta]
       security: []
       responses:
         '200':
@@ -218,6 +233,7 @@ paths:
   /models:
     get:
       summary: List available Claude models discovered from local Claude CLI binary
+      tags: [Meta]
       security: []
       responses:
         '200':
@@ -232,34 +248,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /openapi.yaml:
-    get:
-      summary: Get raw OpenAPI specification
-      security: []
-      responses:
-        '200':
-          description: OpenAPI YAML document
-          content:
-            application/yaml:
-              schema:
-                type: string
-        '500':
-          description: Failed to load OpenAPI spec
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /docs:
-    get:
-      summary: Render interactive API documentation UI
-      security: []
-      responses:
-        '200':
-          description: HTML documentation UI
-          content:
-            text/html:
-              schema:
-                type: string
 components:
   securitySchemes:
     ApiKeyAuth:

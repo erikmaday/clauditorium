@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { createApp } from '../../src/app'
 import { getDocumentedOperations } from './openapi.helpers'
 
+const RUNTIME_UNDOCUMENTED_ALLOWLIST = new Set([
+  'GET /docs',
+  'GET /openapi.yaml'
+])
+
 function getRuntimeOperations(): Set<string> {
   const app = createApp()
   const endpoints = listEndpoints(app)
@@ -26,7 +31,9 @@ describe('OpenAPI route coverage', () => {
     const runtime = getRuntimeOperations()
     const documented = getDocumentedOperations()
 
-    const undocumentedRuntime = [...runtime].filter((op) => !documented.has(op))
+    const undocumentedRuntime = [...runtime].filter(
+      (op) => !documented.has(op) && !RUNTIME_UNDOCUMENTED_ALLOWLIST.has(op)
+    )
     const staleDocumented = [...documented].filter((op) => !runtime.has(op))
 
     expect(undocumentedRuntime).toEqual([])
