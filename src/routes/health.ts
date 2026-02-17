@@ -40,9 +40,39 @@ healthRouter.post('/recheck', strictApiKeyMiddleware, (_req: Request, res: Respo
 })
 
 healthRouter.get('/history', (_req: Request, res: Response) => {
+  const sinceRaw = _req.query.since
+  const history = getClaudeCliReadinessHistory()
+
+  if (sinceRaw !== undefined) {
+    if (typeof sinceRaw !== 'string') {
+      res.status(400).json({
+        error: 'validation_error',
+        message: 'since must be an ISO timestamp string',
+        request_id: _req.requestId
+      })
+      return
+    }
+
+    const sinceTime = Date.parse(sinceRaw)
+    if (Number.isNaN(sinceTime)) {
+      res.status(400).json({
+        error: 'validation_error',
+        message: 'since must be a valid ISO timestamp',
+        request_id: _req.requestId
+      })
+      return
+    }
+
+    res.json({
+      observability: getProcessObservability(),
+      history: history.filter((entry) => Date.parse(entry.checked_at) >= sinceTime)
+    })
+    return
+  }
+
   res.json({
     observability: getProcessObservability(),
-    history: getClaudeCliReadinessHistory()
+    history
   })
 })
 

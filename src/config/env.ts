@@ -71,11 +71,41 @@ if (startupCheckTimeoutSeconds < 1) {
   throw new ValidationError('CLAUDE_API_STARTUP_CHECK_TIMEOUT must be at least 1 second')
 }
 
+const rateLimitWindowSeconds = parseIntegerEnv(
+  process.env.CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS,
+  60,
+  'CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS'
+)
+if (rateLimitWindowSeconds < 1) {
+  throw new ValidationError('CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS must be at least 1 second')
+}
+
+const rateLimitMaxRequests = parseIntegerEnv(
+  process.env.CLAUDE_API_RATE_LIMIT_MAX_REQUESTS,
+  0,
+  'CLAUDE_API_RATE_LIMIT_MAX_REQUESTS'
+)
+if (rateLimitMaxRequests < 0) {
+  throw new ValidationError('CLAUDE_API_RATE_LIMIT_MAX_REQUESTS must be 0 or greater')
+}
+
+const healthHistoryLimit = parseIntegerEnv(
+  process.env.CLAUDE_API_HEALTH_HISTORY_LIMIT,
+  25,
+  'CLAUDE_API_HEALTH_HISTORY_LIMIT'
+)
+if (healthHistoryLimit < 1) {
+  throw new ValidationError('CLAUDE_API_HEALTH_HISTORY_LIMIT must be at least 1')
+}
+
 export const config = {
   host: process.env.CLAUDE_API_HOST || '127.0.0.1',
   port,
   timeoutMs: timeoutSeconds * 1000,
   startupCheckTimeoutMs: startupCheckTimeoutSeconds * 1000,
+  rateLimitWindowMs: rateLimitWindowSeconds * 1000,
+  rateLimitMaxRequests,
+  healthHistoryLimit,
   bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),
   corsEnabled: parseBooleanEnv(process.env.CLAUDE_API_CORS),
   strictHealth: parseBooleanEnv(process.env.CLAUDE_API_STRICT_HEALTH),

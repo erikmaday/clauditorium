@@ -2,6 +2,7 @@ import cors from 'cors'
 import express from 'express'
 import { config } from './config/env'
 import { apiKeyMiddleware } from './middleware/apiKey'
+import { rateLimitMiddleware } from './middleware/rateLimit'
 import { requestIdMiddleware } from './middleware/requestId'
 import { requestTimingMiddleware } from './middleware/requestTiming'
 import { errorHandler } from './middleware/errorHandler'
@@ -25,8 +26,8 @@ export function createApp() {
 
   app.use('/health', healthRouter)
   app.use('/version', versionRouter)
-  app.use('/ask', apiKeyMiddleware, askRouter)
-  app.use('/chat', apiKeyMiddleware, chatRouter)
+  app.use('/ask', apiKeyMiddleware, rateLimitMiddleware, askRouter)
+  app.use('/chat', apiKeyMiddleware, rateLimitMiddleware, chatRouter)
 
   app.use(notFoundHandler)
   app.use(errorHandler)

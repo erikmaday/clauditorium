@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: Clauditorium API
+  version: 1.1.1
+  description: REST API wrapper around Claude CLI.
+servers:
+  - url: http://127.0.0.1:5051
+security:
+  - ApiKeyAuth: []
+paths:
+  /ask:
+    post:
+      summary: Send a single prompt to Claude
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+              description: Seconds until next allowed request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+        '500':
+          description: Internal/server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Claude CLI request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /chat:
+    post:
+      summary: Send chat history and receive the next assistant message
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+        '500':
+          description: Internal/server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Claude CLI request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health:
+    get:
+      summary: Get health and readiness status
+      security: []
+      responses:
+        '200':
+          description: Health is OK or degraded (strict mode disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Health degraded in strict mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /health/history:
+    get:
+      summary: Get recent Claude CLI readiness checks
+      security: []
+      parameters:
+        - in: query
+          name: since
+          required: false
+          description: Optional ISO timestamp; only returns entries checked at or after this value.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Readiness history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthHistoryResponse'
+        '400':
+          description: Invalid since query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health/recheck:
+    post:
+      summary: Trigger a new Claude CLI readiness check
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Recheck completed; health OK or degraded (strict mode disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: API key not configured or strict health degraded
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/HealthResponse'
+  /version:
+    get:
+      summary: Get runtime version/config summary
+      security: []
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Required for /ask and /chat when CLAUDE_API_KEY is configured, and always required for /health/recheck.
+  schemas:
+    Message:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+          example: Hello
+    AskRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+        model:
+          type: string
+      additionalProperties: false
+    AskResponse:
+      type: object
+      required: [success, response]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        response:
+          type: string
+    ChatRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Message'
+        system:
+          type: string
+        model:
+          type: string
+      additionalProperties: false
+    ChatResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          $ref: '#/components/schemas/Message'
+    Readiness:
+      type: object
+      required: [status, checked_at]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready, unknown]
+        checked_at:
+          type: string
+          format: date-time
+        check_duration_ms:
+          type: number
+        exit_code:
+          type: integer
+          nullable: true
+        signal:
+          type: string
+          nullable: true
+        version:
+          type: string
+        error:
+          type: string
+    Observability:
+      type: object
+      required: [started_at, uptime_seconds]
+      properties:
+        started_at:
+          type: string
+          format: date-time
+        uptime_seconds:
+          type: number
+    HealthResponse:
+      type: object
+      required: [status, strict_mode, observability, readiness]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        strict_mode:
+          type: boolean
+        observability:
+          $ref: '#/components/schemas/Observability'
+        readiness:
+          type: object
+          required: [claude_cli]
+          properties:
+            claude_cli:
+              $ref: '#/components/schemas/Readiness'
+    HealthHistoryResponse:
+      type: object
+      required: [observability, history]
+      properties:
+        observability:
+          $ref: '#/components/schemas/Observability'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Readiness'
+    VersionResponse:
+      type: object
+      required: [version, timeout, cors_enabled]
+      properties:
+        version:
+          type: string
+        timeout:
+          type: number
+          description: Request timeout in seconds.
+        cors_enabled:
+          type: boolean
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          nullable: true
+          description: Validation details when available.

@@ -108,6 +108,22 @@ describe('runtime hardening', () => {
     expect(response.body.message).toContain('1kb')
   })
 
+  it('returns 429 when rate limit is exceeded', async () => {
+    const { app } = await loadAppWithMockedCli({
+      CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS: '60',
+      CLAUDE_API_RATE_LIMIT_MAX_REQUESTS: '1'
+    })
+
+    const first = await request(app).post('/ask').send({ prompt: 'one' })
+    const second = await request(app).post('/ask').send({ prompt: 'two' })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(429)
+    expect(second.body.error).toBe('rate_limited')
+    expect(second.body.retry_after_seconds).toBeTypeOf('number')
+    expect(second.headers['retry-after']).toBeDefined()
+  })
+
   it('logs request duration on response finish', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const { app } = await loadAppWithMockedCli({ CLAUDE_API_LOG_LEVEL: 'INFO' })
@@ -242,5 +258,43 @@ describe('runtime hardening', () => {
     expect(response.body.history).toHaveLength(2)
     expect(response.body.history[0].status).toBe('ready')
     expect(response.body.history[1].status).toBe('not_ready')
+  })
+
+  it('filters readiness history by since timestamp', async () => {
+    process.env = { ...ORIGINAL_ENV }
+    vi.doMock('../../src/services/readiness', () => ({
+      checkClaudeCliReadiness: vi.fn(),
+      getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
+      getClaudeCliReadinessHistory: () => [
+        { status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' },
+        { status: 'not_ready', checked_at: '2026-01-01T00:05:00.000Z' }
+      ],
+      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+
+    const response = await request(app).get('/health/history').query({ since: '2026-01-01T00:03:00.000Z' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.history).toHaveLength(1)
+    expect(response.body.history[0].status).toBe('not_ready')
+  })
+
+  it('returns validation error for invalid since timestamp', async () => {
+    process.env = { ...ORIGINAL_ENV }
+    vi.doMock('../../src/services/readiness', () => ({
+      checkClaudeCliReadiness: vi.fn(),
+      getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
+      getClaudeCliReadinessHistory: () => [],
+      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+
+    const response = await request(app).get('/health/history').query({ since: 'not-a-date' })
+
+    expect(response.status).toBe(400)
+    expect(response.body.error).toBe('validation_error')
   })
 })

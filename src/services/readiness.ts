@@ -11,8 +11,6 @@ export interface ClaudeCliReadiness {
   error?: string
 }
 
-const READINESS_HISTORY_LIMIT = 25
-
 let claudeCliReadiness: ClaudeCliReadiness = {
   status: 'unknown',
   checked_at: new Date(0).toISOString()
@@ -39,8 +37,8 @@ function updateReadiness(readiness: ClaudeCliReadiness): ClaudeCliReadiness {
   claudeCliReadiness = readiness
   claudeCliReadinessHistory.push(readiness)
 
-  if (claudeCliReadinessHistory.length > READINESS_HISTORY_LIMIT) {
-    claudeCliReadinessHistory.splice(0, claudeCliReadinessHistory.length - READINESS_HISTORY_LIMIT)
+  if (claudeCliReadinessHistory.length > config.healthHistoryLimit) {
+    claudeCliReadinessHistory.splice(0, claudeCliReadinessHistory.length - config.healthHistoryLimit)
   }
 
   return claudeCliReadiness

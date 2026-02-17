@@ -16,6 +16,9 @@ describe('config/env', () => {
     expect(config.port).toBe(5051)
     expect(config.timeoutMs).toBe(120000)
     expect(config.startupCheckTimeoutMs).toBe(5000)
+    expect(config.rateLimitWindowMs).toBe(60000)
+    expect(config.rateLimitMaxRequests).toBe(0)
+    expect(config.healthHistoryLimit).toBe(25)
     expect(config.bodyLimit).toBe('1mb')
     expect(config.corsEnabled).toBe(false)
     expect(config.strictHealth).toBe(false)
@@ -29,6 +32,9 @@ describe('config/env', () => {
       CLAUDE_API_PORT: '8080',
       CLAUDE_API_TIMEOUT: '30',
       CLAUDE_API_STARTUP_CHECK_TIMEOUT: '8',
+      CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS: '30',
+      CLAUDE_API_RATE_LIMIT_MAX_REQUESTS: '5',
+      CLAUDE_API_HEALTH_HISTORY_LIMIT: '50',
       CLAUDE_API_BODY_LIMIT: '2mb',
       CLAUDE_API_CORS: 'true',
       CLAUDE_API_LOG_LEVEL: 'debug',
@@ -42,6 +48,9 @@ describe('config/env', () => {
       port: 8080,
       timeoutMs: 30000,
       startupCheckTimeoutMs: 8000,
+      rateLimitWindowMs: 30000,
+      rateLimitMaxRequests: 5,
+      healthHistoryLimit: 50,
       bodyLimit: '2mb',
       corsEnabled: true,
       logLevel: 'DEBUG',
@@ -73,5 +82,20 @@ describe('config/env', () => {
   it('throws when startup check timeout is below minimum', async () => {
     process.env = { CLAUDE_API_STARTUP_CHECK_TIMEOUT: '0' }
     await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_STARTUP_CHECK_TIMEOUT must be at least 1 second')
+  })
+
+  it('throws when rate limit window is below minimum', async () => {
+    process.env = { CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS must be at least 1 second')
+  })
+
+  it('throws when rate limit max requests is below minimum', async () => {
+    process.env = { CLAUDE_API_RATE_LIMIT_MAX_REQUESTS: '-1' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_RATE_LIMIT_MAX_REQUESTS must be 0 or greater')
+  })
+
+  it('throws when health history limit is below minimum', async () => {
+    process.env = { CLAUDE_API_HEALTH_HISTORY_LIMIT: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_HEALTH_HISTORY_LIMIT must be at least 1')
   })
 })
