@@ -2,6 +2,7 @@ import { createApp } from './app'
 import { config } from './config/env'
 import { VERSION } from './config/version'
 import { log } from './core/logger'
+import { checkClaudeCliReadiness } from './services/readiness'
 
 function printBanner(): void {
   const divider = '='.repeat(50)
@@ -27,8 +28,15 @@ function printBanner(): void {
 
 export function startServer(): void {
   const app = createApp()
+  const readiness = checkClaudeCliReadiness()
 
   printBanner()
+
+  if (readiness.status === 'ready') {
+    log('INFO', `Claude CLI readiness check passed (${readiness.version || 'unknown version'})`)
+  } else {
+    log('WARN', `Claude CLI readiness check failed: ${readiness.error || 'unknown error'}`)
+  }
 
   const server = app.listen(config.port, config.host, () => {
     log('INFO', `Claude API Server v${VERSION} starting...`)

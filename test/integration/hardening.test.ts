@@ -23,6 +23,26 @@ async function loadAppWithMockedCli(envOverrides: Record<string, string> = {}) {
   }
 }
 
+async function loadAppWithMockedReadiness(
+  readinessStatus: 'ready' | 'not_ready',
+  strictHealth: 'true' | 'false'
+) {
+  process.env = { ...ORIGINAL_ENV, CLAUDE_API_STRICT_HEALTH: strictHealth }
+
+  vi.doMock('../../src/services/readiness', () => ({
+    getClaudeCliReadiness: () => ({
+      status: readinessStatus,
+      checked_at: '2026-01-01T00:00:00.000Z',
+      ...(readinessStatus === 'ready'
+        ? { version: 'claude 1.0.0' }
+        : { error: 'claude not found' })
+    })
+  }))
+
+  const { createApp } = await import('../../src/app')
+  return createApp()
+}
+
 describe('runtime hardening', () => {
   it('enforces API key on /ask when configured', async () => {
     const { app, runClaude } = await loadAppWithMockedCli({ CLAUDE_API_KEY: 'secret-key' })
@@ -80,5 +100,27 @@ describe('runtime hardening', () => {
     })
 
     expect(emitted).toBe(true)
+  })
+
+  it('returns degraded health with 200 when strict mode is disabled', async () => {
+    const app = await loadAppWithMockedReadiness('not_ready', 'false')
+
+    const response = await request(app).get('/health')
+
+    expect(response.status).toBe(200)
+    expect(response.body.status).toBe('degraded')
+    expect(response.body.strict_mode).toBe(false)
+    expect(response.body.readiness.claude_cli.status).toBe('not_ready')
+  })
+
+  it('returns degraded health with 503 when strict mode is enabled', async () => {
+    const app = await loadAppWithMockedReadiness('not_ready', 'true')
+
+    const response = await request(app).get('/health')
+
+    expect(response.status).toBe(503)
+    expect(response.body.status).toBe('degraded')
+    expect(response.body.strict_mode).toBe(true)
+    expect(response.body.readiness.claude_cli.status).toBe('not_ready')
   })
 })

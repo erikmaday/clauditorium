@@ -20,7 +20,9 @@ describe('app integration', () => {
     const response = await request(app).get('/health')
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ status: 'ok' })
+    expect(response.body.status).toBe('ok')
+    expect(response.body).toHaveProperty('strict_mode')
+    expect(response.body).toHaveProperty('readiness.claude_cli')
   })
 
   it('returns package version info', async () => {

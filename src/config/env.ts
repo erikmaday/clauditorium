@@ -48,6 +48,10 @@ function parseApiKey(value: string | undefined): string | undefined {
   return trimmed || undefined
 }
 
+function parseBooleanEnv(value: string | undefined): boolean {
+  return value?.toLowerCase() === 'true'
+}
+
 const port = parseIntegerEnv(process.env.CLAUDE_API_PORT, 5051, 'CLAUDE_API_PORT')
 if (port < 1 || port > 65535) {
   throw new ValidationError('CLAUDE_API_PORT must be between 1 and 65535')
@@ -58,12 +62,23 @@ if (timeoutSeconds < 1) {
   throw new ValidationError('CLAUDE_API_TIMEOUT must be at least 1 second')
 }
 
+const startupCheckTimeoutSeconds = parseIntegerEnv(
+  process.env.CLAUDE_API_STARTUP_CHECK_TIMEOUT,
+  5,
+  'CLAUDE_API_STARTUP_CHECK_TIMEOUT'
+)
+if (startupCheckTimeoutSeconds < 1) {
+  throw new ValidationError('CLAUDE_API_STARTUP_CHECK_TIMEOUT must be at least 1 second')
+}
+
 export const config = {
   host: process.env.CLAUDE_API_HOST || '127.0.0.1',
   port,
   timeoutMs: timeoutSeconds * 1000,
+  startupCheckTimeoutMs: startupCheckTimeoutSeconds * 1000,
   bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),
-  corsEnabled: process.env.CLAUDE_API_CORS?.toLowerCase() === 'true',
+  corsEnabled: parseBooleanEnv(process.env.CLAUDE_API_CORS),
+  strictHealth: parseBooleanEnv(process.env.CLAUDE_API_STRICT_HEALTH),
   logLevel: parseLogLevel(process.env.CLAUDE_API_LOG_LEVEL),
   apiKey: parseApiKey(process.env.CLAUDE_API_KEY)
 }

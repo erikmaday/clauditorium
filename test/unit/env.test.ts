@@ -15,8 +15,12 @@ describe('config/env', () => {
     expect(config.host).toBe('127.0.0.1')
     expect(config.port).toBe(5051)
     expect(config.timeoutMs).toBe(120000)
+    expect(config.startupCheckTimeoutMs).toBe(5000)
+    expect(config.bodyLimit).toBe('1mb')
     expect(config.corsEnabled).toBe(false)
+    expect(config.strictHealth).toBe(false)
     expect(config.logLevel).toBe('INFO')
+    expect(config.apiKey).toBeUndefined()
   })
 
   it('parses valid custom env vars', async () => {
@@ -24,8 +28,12 @@ describe('config/env', () => {
       CLAUDE_API_HOST: '0.0.0.0',
       CLAUDE_API_PORT: '8080',
       CLAUDE_API_TIMEOUT: '30',
+      CLAUDE_API_STARTUP_CHECK_TIMEOUT: '8',
+      CLAUDE_API_BODY_LIMIT: '2mb',
       CLAUDE_API_CORS: 'true',
-      CLAUDE_API_LOG_LEVEL: 'debug'
+      CLAUDE_API_LOG_LEVEL: 'debug',
+      CLAUDE_API_STRICT_HEALTH: 'true',
+      CLAUDE_API_KEY: 'my-key'
     }
 
     const { config } = await import('../../src/config/env')
@@ -33,10 +41,12 @@ describe('config/env', () => {
       host: '0.0.0.0',
       port: 8080,
       timeoutMs: 30000,
-      bodyLimit: '1mb',
+      startupCheckTimeoutMs: 8000,
+      bodyLimit: '2mb',
       corsEnabled: true,
       logLevel: 'DEBUG',
-      apiKey: undefined
+      strictHealth: true,
+      apiKey: 'my-key'
     })
   })
 
@@ -58,5 +68,10 @@ describe('config/env', () => {
   it('throws for invalid log level', async () => {
     process.env = { CLAUDE_API_LOG_LEVEL: 'trace' }
     await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_LOG_LEVEL must be one of DEBUG, INFO, WARN, ERROR')
+  })
+
+  it('throws when startup check timeout is below minimum', async () => {
+    process.env = { CLAUDE_API_STARTUP_CHECK_TIMEOUT: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow('CLAUDE_API_STARTUP_CHECK_TIMEOUT must be at least 1 second')
   })
 })
