@@ -105,6 +105,22 @@ docker run --rm -p 5051:5051 \
   your-image-name
 ```
 
+Quick smoke check (container already running on `:5051`):
+
+```bash
+curl -s http://localhost:5051/health
+curl -s http://localhost:5051/models
+curl -s -X POST http://localhost:5051/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Reply with only: smoke-ok"}'
+```
+
+One-command smoke test script (expects image exposing port `5051`):
+
+```bash
+./scripts/smoke-container.sh your-image-name
+```
+
 ## API Contract Governance
 
 OpenAPI contract correctness is CI-gated with strict enforcement:
@@ -204,6 +220,40 @@ Example response:
   ]
 }
 ```
+
+### GET /health
+
+```bash
+curl http://localhost:5051/health
+```
+
+### GET /health/history
+
+```bash
+curl http://localhost:5051/health/history
+curl "http://localhost:5051/health/history?since=2026-01-01T00:00:00.000Z"
+```
+
+### POST /health/recheck
+
+```bash
+curl -X POST http://localhost:5051/health/recheck \
+  -H "x-api-key: your-api-key"
+```
+
+### GET /version
+
+```bash
+curl http://localhost:5051/version
+```
+
+### Documentation endpoints
+
+```bash
+curl http://localhost:5051/openapi.yaml
+```
+
+Open in browser: `http://localhost:5051/docs`
 
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 `/chat` responses include `conversation_id`, which you can reuse for continuation calls.
