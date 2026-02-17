@@ -36,7 +36,22 @@ That's it. Server runs on `http://localhost:5051`.
 - Multi-turn chat with message history
 - Configurable via environment variables
 - Request tracking with unique IDs
+- Environment and request validation with consistent error responses
 - Minimal dependencies (Express + cors)
+
+## Architecture
+
+The server is organized into focused modules:
+
+- `src/config` - Environment parsing and runtime version loading
+- `src/core` - Logging and error helpers
+- `src/clients` - Claude CLI process wrapper
+- `src/services` - Prompt formatting helpers
+- `src/routes` - Endpoint handlers and request validation
+- `src/middleware` - Request ID, error handling, not-found handling
+- `src/app.ts` - Express app composition
+- `src/server.ts` - Startup and banner
+- `src/index.ts` - CLI entrypoint
 
 ## Installation
 
@@ -51,6 +66,17 @@ npm install -g clauditorium
 npm install clauditorium
 ```
 
+## Development
+
+```bash
+npm run lint
+npm run test
+npm run test:coverage
+npm run build
+```
+
+Coverage thresholds are enforced in CI via `npm run test:coverage`.
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
@@ -59,6 +85,8 @@ npm install clauditorium
 | `/chat` | POST | Chat with message history |
 | `/health` | GET | Health check |
 | `/version` | GET | Version info |
+
+`/version` reports the package version from `package.json` at runtime.
 
 ### POST /ask
 
