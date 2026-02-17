@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-02-17
+
+### Documentation
+- Clarified how to use `clauditorium` as an npm dependency inside external Dockerized Node applications.
+- Added a concise token-based runtime example using `CLAUDE_CODE_OAUTH_TOKEN`.
+
 ## [1.2.1] - 2026-02-17
 
 ### Fixed
