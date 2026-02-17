@@ -215,6 +215,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VersionResponse'
+  /models:
+    get:
+      summary: List available Claude models discovered from local Claude CLI binary
+      security: []
+      responses:
+        '200':
+          description: Discovered model list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+        '500':
+          description: Model discovery failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /openapi.yaml:
     get:
       summary: Get raw OpenAPI specification
@@ -337,6 +354,16 @@ components:
           type: string
         message:
           $ref: '#/components/schemas/Message'
+    ModelsResponse:
+      type: object
+      required: [count, models]
+      properties:
+        count:
+          type: integer
+        models:
+          type: array
+          items:
+            type: string
     Readiness:
       type: object
       required: [status, checked_at]

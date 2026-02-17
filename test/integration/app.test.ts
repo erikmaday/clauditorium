@@ -6,14 +6,21 @@ import { clearConversations } from '../../src/services/conversationStore'
 const { mockedRunClaude } = vi.hoisted(() => ({
   mockedRunClaude: vi.fn()
 }))
+const { mockedListAvailableModels } = vi.hoisted(() => ({
+  mockedListAvailableModels: vi.fn()
+}))
 
 vi.mock('../../src/clients/claudeCli', () => ({
   runClaude: mockedRunClaude
+}))
+vi.mock('../../src/services/models', () => ({
+  listAvailableModels: mockedListAvailableModels
 }))
 
 describe('app integration', () => {
   beforeEach(() => {
     mockedRunClaude.mockReset()
+    mockedListAvailableModels.mockReset()
     clearConversations()
   })
 
@@ -37,6 +44,22 @@ describe('app integration', () => {
     expect(response.body.version).toBeTypeOf('string')
     expect(response.body.timeout).toBeTypeOf('number')
     expect(response.body).toHaveProperty('cors_enabled')
+  })
+
+  it('returns available models', async () => {
+    mockedListAvailableModels.mockReturnValueOnce([
+      'claude-haiku-4-5-20251001',
+      'claude-sonnet-4-5-20250929'
+    ])
+
+    const app = createApp()
+    const response = await request(app).get('/models')
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({
+      count: 2,
+      models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929']
+    })
   })
 
   it('validates /ask body', async () => {

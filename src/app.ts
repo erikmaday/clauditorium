@@ -11,6 +11,7 @@ import { askRouter } from './routes/ask'
 import { chatRouter } from './routes/chat'
 import { docsRouter } from './routes/docs'
 import { healthRouter } from './routes/health'
+import { modelsRouter } from './routes/models'
 import { versionRouter } from './routes/version'
 
 export function createApp() {
@@ -26,6 +27,7 @@ export function createApp() {
   app.use(express.json({ limit: config.bodyLimit }))
 
   app.use('/health', healthRouter)
+  app.use('/models', modelsRouter)
   app.use('/version', versionRouter)
   app.use('/', docsRouter)
   app.use('/ask', apiKeyMiddleware, rateLimitMiddleware, askRouter)

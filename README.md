@@ -99,6 +99,7 @@ Any endpoint, request/response shape, status code, or auth requirement change mu
 |----------|--------|-------------|
 | `/ask` | POST | Send a prompt, get a response |
 | `/chat` | POST | Chat with persistent `conversation_id` context |
+| `/models` | GET | List available Claude models discovered from local CLI binary |
 | `/health` | GET | Health check |
 | `/health/history` | GET | Recent Claude CLI readiness check history |
 | `/health/recheck` | POST | Re-run Claude CLI readiness check |
@@ -158,6 +159,24 @@ curl -X POST http://localhost:5051/chat \
 
 If `conversation_id` is unknown/expired, `/chat` returns `400 validation_error`.
 
+### GET /models
+
+```bash
+curl http://localhost:5051/models
+```
+
+Example response:
+
+```json
+{
+  "count": 2,
+  "models": [
+    "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-5-20250929"
+  ]
+}
+```
+
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 `/chat` responses include `conversation_id`, which you can reuse for continuation calls.
 
@@ -186,6 +205,7 @@ Use `GET /health/history?since=2026-01-01T00:00:00.000Z` to filter entries by ti
 | `timeout` | `504` | Yes | Retry with simpler prompt or higher timeout |
 | `cli_error` | `500` | Sometimes | Check Claude CLI stderr/auth/session |
 | `spawn_error` | `500` | Sometimes | Verify Claude CLI install and PATH |
+| `models_unavailable` | `500` | Sometimes | Ensure Claude CLI is installed and locally discoverable |
 | `unknown_error` | `500` | Yes | Retry; inspect logs if persistent |
 | `internal_error` | `500` | Yes | Retry; inspect server logs |
 | `api_key_not_configured` | `503` | No | Set `CLAUDE_API_KEY` on server |

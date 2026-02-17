@@ -286,6 +286,39 @@ describe('OpenAPI response contract', () => {
     expectOpenApi('/version', 'get', response.status, response.body)
   })
 
+  it('validates /models 200', async () => {
+    vi.resetModules()
+    vi.doMock('../../src/services/models', () => ({
+      listAvailableModels: () => ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929']
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+    const response = await request(app).get('/models')
+
+    expect(response.status).toBe(200)
+    expectOpenApi('/models', 'get', response.status, response.body)
+  })
+
+  it('validates /models 500', async () => {
+    vi.resetModules()
+    vi.doMock('../../src/services/models', () => ({
+      listAvailableModels: () => {
+        throw {
+          status: 500,
+          error: 'models_unavailable',
+          message: 'claude not found',
+          request_id: 'abcd1234'
+        }
+      }
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+    const response = await request(app).get('/models')
+
+    expect(response.status).toBe(500)
+    expectOpenApi('/models', 'get', response.status, response.body)
+  })
+
   it('validates /openapi.yaml 200', async () => {
     const app = await createFreshApp()
     const response = await request(app).get('/openapi.yaml')
