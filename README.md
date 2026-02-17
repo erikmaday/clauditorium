@@ -122,6 +122,12 @@ curl -X POST http://localhost:5051/chat \
 
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 
+If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
+
+```bash
+-H "x-api-key: your-api-key"
+```
+
 ## Configuration
 
 Set these environment variables to customize behavior:
@@ -131,8 +137,10 @@ Set these environment variables to customize behavior:
 | `CLAUDE_API_HOST` | `127.0.0.1` | Server host |
 | `CLAUDE_API_PORT` | `5051` | Server port |
 | `CLAUDE_API_TIMEOUT` | `120` | Request timeout (seconds) |
+| `CLAUDE_API_BODY_LIMIT` | `1mb` | Max JSON request body size |
 | `CLAUDE_API_CORS` | `false` | Enable CORS |
 | `CLAUDE_API_LOG_LEVEL` | `INFO` | Log level |
+| `CLAUDE_API_KEY` | _(unset)_ | Optional API key for `/ask` and `/chat` |
 
 Example:
 ```bash

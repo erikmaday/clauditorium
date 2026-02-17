@@ -26,6 +26,28 @@ function parseLogLevel(value: string | undefined): 'DEBUG' | 'INFO' | 'WARN' | '
   throw new ValidationError('CLAUDE_API_LOG_LEVEL must be one of DEBUG, INFO, WARN, ERROR')
 }
 
+function parseBodyLimit(value: string | undefined): string {
+  if (!value) {
+    return '1mb'
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) {
+    throw new ValidationError('CLAUDE_API_BODY_LIMIT must not be empty when provided')
+  }
+
+  return trimmed
+}
+
+function parseApiKey(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
 const port = parseIntegerEnv(process.env.CLAUDE_API_PORT, 5051, 'CLAUDE_API_PORT')
 if (port < 1 || port > 65535) {
   throw new ValidationError('CLAUDE_API_PORT must be between 1 and 65535')
@@ -40,8 +62,10 @@ export const config = {
   host: process.env.CLAUDE_API_HOST || '127.0.0.1',
   port,
   timeoutMs: timeoutSeconds * 1000,
+  bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),
   corsEnabled: process.env.CLAUDE_API_CORS?.toLowerCase() === 'true',
-  logLevel: parseLogLevel(process.env.CLAUDE_API_LOG_LEVEL)
+  logLevel: parseLogLevel(process.env.CLAUDE_API_LOG_LEVEL),
+  apiKey: parseApiKey(process.env.CLAUDE_API_KEY)
 }
 
 export const CLAUDE_SPAWN_ENV_BLOCKLIST = [

@@ -33,8 +33,10 @@ describe('config/env', () => {
       host: '0.0.0.0',
       port: 8080,
       timeoutMs: 30000,
+      bodyLimit: '1mb',
       corsEnabled: true,
-      logLevel: 'DEBUG'
+      logLevel: 'DEBUG',
+      apiKey: undefined
     })
   })
 
