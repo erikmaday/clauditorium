@@ -18,7 +18,7 @@ describe('conversationStore', () => {
       system: 'be concise'
     })
     expect(created.id).toBeTypeOf('string')
-    expect(created.charsUsed).toBeGreaterThan(0)
+    expect(created.tokensUsed).toBeGreaterThan(0)
     expect(created.expiresAt).toBeTypeOf('string')
 
     created.messages.push({ role: 'assistant', content: 'hi' })
@@ -26,7 +26,7 @@ describe('conversationStore', () => {
     const reloaded = getConversation(created.id)
 
     expect(reloaded).toBeDefined()
-    expect(reloaded?.charsUsed).toBeGreaterThan(created.charsUsed - 1)
+    expect(reloaded?.tokensUsed).toBeGreaterThan(created.tokensUsed - 1)
 
     clearConversations()
   })

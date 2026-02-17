@@ -77,6 +77,16 @@ npm run build
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
 
+## Dependency Upgrade Policy
+
+Minor/patch dependency updates are applied in normal feature work. Major upgrades are handled in dedicated PRs to reduce regression risk.
+
+Planned dedicated major upgrade tracks:
+
+- `vitest` + `@vitest/coverage-v8`: `3.x` -> `4.x`
+- `eslint`: `9.x` -> `10.x`
+- `express`: `4.x` -> `5.x`
+
 ## Compatibility
 
 - Node.js: `>=18` (CI-tested on Node `22`)
@@ -267,6 +277,7 @@ Open in browser: `http://localhost:5051/docs`
 
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 `/chat` responses include `conversation_id`, which you can reuse for continuation calls.
+Using the same `conversation_id` intentionally carries prior message context; omit it (or delete it first) to start fresh.
 
 If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
 
@@ -323,8 +334,12 @@ Set these environment variables to customize behavior:
 | `CLAUDE_API_HEALTH_HISTORY_LIMIT` | `25` | Max readiness entries retained in memory |
 | `CLAUDE_API_CONVERSATION_TTL_SECONDS` | `86400` | Conversation inactivity TTL (seconds) |
 | `CLAUDE_API_MAX_CONVERSATIONS` | `1000` | Max stored conversations in memory before oldest inactive eviction |
-| `CLAUDE_API_CONTEXT_WARN_CHARS` | `80000` | Soft warning threshold for conversation context size |
-| `CLAUDE_API_CONTEXT_TARGET_CHARS` | `120000` | Soft target threshold for conversation context size |
+| `CLAUDE_API_CONTEXT_WARN_TOKENS` | `12000` | Soft warning threshold for estimated conversation token usage |
+| `CLAUDE_API_CONTEXT_TARGET_TOKENS` | `18000` | Soft target threshold for estimated conversation token usage |
+| `CLAUDE_API_CONTEXT_COMPACT_KEEP_MESSAGES` | `6` | Keep this many recent messages verbatim during auto-compaction |
+| `CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS` | `2000` | Max characters used for generated rolling summary during compaction |
+| `CLAUDE_API_ISOLATE_CWD` | `true` | Run Claude in an isolated empty working directory to avoid project-context leakage |
+| `CLAUDE_API_CLAUDE_CWD` | system temp dir | Optional override path for isolated Claude working directory |
 | `CLAUDE_API_BODY_LIMIT` | `1mb` | Max JSON request body size |
 | `CLAUDE_API_CORS` | `false` | Enable CORS |
 | `CLAUDE_API_LOG_LEVEL` | `INFO` | Log level |

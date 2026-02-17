@@ -129,11 +129,13 @@ describe('app integration', () => {
         expires_at: expect.any(String)
       },
       context: {
-        chars_used: expect.any(Number),
-        warn_chars: expect.any(Number),
-        target_chars: expect.any(Number),
+        tokens_used: expect.any(Number),
+        warn_tokens: expect.any(Number),
+        target_tokens: expect.any(Number),
         over_warn: expect.any(Boolean),
-        over_target: expect.any(Boolean)
+        over_target: expect.any(Boolean),
+        compacted: expect.any(Boolean),
+        compacted_messages: expect.any(Number)
       }
     })
   })

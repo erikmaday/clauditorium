@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import { config, CLAUDE_SPAWN_ENV_BLOCKLIST } from '../config/env'
 import { log } from '../core/logger'
 import { createCliError } from '../core/errors'
+import { mkdirSync } from 'fs'
 
 function buildClaudeSpawnEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env }
@@ -24,14 +25,30 @@ export function runClaude(prompt: string, requestId: string, model?: string): Pr
     log('INFO', `[${requestId}] Running Claude CLI (prompt length: ${prompt.length} chars${model ? `, model: ${model}` : ''})`)
 
     const spawnEnv = buildClaudeSpawnEnv()
+    let spawnCwd: string | undefined
+    if (config.isolateClaudeCwd) {
+      try {
+        mkdirSync(config.claudeCwd, { recursive: true })
+        spawnCwd = config.claudeCwd
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create isolated Claude working directory'
+        reject(createCliError(500, 'spawn_error', message, requestId))
+        return
+      }
+    }
+
     const strippedKeys = CLAUDE_SPAWN_ENV_BLOCKLIST.filter((key) => process.env[key] !== undefined)
     if (strippedKeys.length > 0) {
       log('DEBUG', `[${requestId}] Stripped inherited env vars before Claude spawn: ${strippedKeys.join(', ')}`)
     }
+    if (spawnCwd) {
+      log('DEBUG', `[${requestId}] Using isolated Claude working directory: ${spawnCwd}`)
+    }
 
     const proc = spawn('claude', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: spawnEnv
+      env: spawnEnv,
+      cwd: spawnCwd
     })
 
     let stdout = ''

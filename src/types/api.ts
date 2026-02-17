@@ -48,11 +48,13 @@ export interface ChatConversationMeta {
 }
 
 export interface ChatContextMeta {
-  chars_used: number
-  warn_chars: number
-  target_chars: number
+  tokens_used: number
+  warn_tokens: number
+  target_tokens: number
   over_warn: boolean
   over_target: boolean
+  compacted: boolean
+  compacted_messages: number
 }
 
 export interface ChatResponse {

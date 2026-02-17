@@ -369,18 +369,22 @@ components:
           format: date-time
     ChatContextMeta:
       type: object
-      required: [chars_used, warn_chars, target_chars, over_warn, over_target]
+      required: [tokens_used, warn_tokens, target_tokens, over_warn, over_target, compacted, compacted_messages]
       properties:
-        chars_used:
+        tokens_used:
           type: integer
-        warn_chars:
+        warn_tokens:
           type: integer
-        target_chars:
+        target_tokens:
           type: integer
         over_warn:
           type: boolean
         over_target:
           type: boolean
+        compacted:
+          type: boolean
+        compacted_messages:
+          type: integer
     ChatResponse:
       type: object
       required: [success, conversation_id, message, conversation, context]
@@ -396,11 +400,13 @@ components:
           updated_at: 2026-01-01T00:00:10.000Z
           expires_at: 2026-01-02T00:00:10.000Z
         context:
-          chars_used: 220
-          warn_chars: 80000
-          target_chars: 120000
+          tokens_used: 75
+          warn_tokens: 12000
+          target_tokens: 18000
           over_warn: false
           over_target: false
+          compacted: false
+          compacted_messages: 0
       properties:
         success:
           type: boolean

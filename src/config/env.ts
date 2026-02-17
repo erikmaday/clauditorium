@@ -1,4 +1,6 @@
 import { ValidationError } from '../core/errors'
+import { tmpdir } from 'os'
+import { join } from 'path'
 
 function parseIntegerEnv(value: string | undefined, fallback: number, field: string): number {
   if (!value) {
@@ -50,6 +52,23 @@ function parseApiKey(value: string | undefined): string | undefined {
 
 function parseBooleanEnv(value: string | undefined): boolean {
   return value?.toLowerCase() === 'true'
+}
+
+function parseBooleanEnvWithDefault(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) {
+    return defaultValue
+  }
+
+  return value.toLowerCase() === 'true'
+}
+
+function parseOptionalString(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  return trimmed || undefined
 }
 
 const port = parseIntegerEnv(process.env.CLAUDE_API_PORT, 5051, 'CLAUDE_API_PORT')
@@ -116,22 +135,40 @@ if (maxConversations < 1) {
   throw new ValidationError('CLAUDE_API_MAX_CONVERSATIONS must be at least 1')
 }
 
-const contextWarnChars = parseIntegerEnv(
-  process.env.CLAUDE_API_CONTEXT_WARN_CHARS,
-  80_000,
-  'CLAUDE_API_CONTEXT_WARN_CHARS'
+const contextWarnTokens = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_WARN_TOKENS,
+  12_000,
+  'CLAUDE_API_CONTEXT_WARN_TOKENS'
 )
-if (contextWarnChars < 1) {
-  throw new ValidationError('CLAUDE_API_CONTEXT_WARN_CHARS must be at least 1')
+if (contextWarnTokens < 1) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_WARN_TOKENS must be at least 1')
 }
 
-const contextTargetChars = parseIntegerEnv(
-  process.env.CLAUDE_API_CONTEXT_TARGET_CHARS,
-  120_000,
-  'CLAUDE_API_CONTEXT_TARGET_CHARS'
+const contextTargetTokens = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_TARGET_TOKENS,
+  18_000,
+  'CLAUDE_API_CONTEXT_TARGET_TOKENS'
 )
-if (contextTargetChars < contextWarnChars) {
-  throw new ValidationError('CLAUDE_API_CONTEXT_TARGET_CHARS must be greater than or equal to CLAUDE_API_CONTEXT_WARN_CHARS')
+if (contextTargetTokens < contextWarnTokens) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_TARGET_TOKENS must be greater than or equal to CLAUDE_API_CONTEXT_WARN_TOKENS')
+}
+
+const contextCompactKeepMessages = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_COMPACT_KEEP_MESSAGES,
+  6,
+  'CLAUDE_API_CONTEXT_COMPACT_KEEP_MESSAGES'
+)
+if (contextCompactKeepMessages < 2) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_COMPACT_KEEP_MESSAGES must be at least 2')
+}
+
+const contextSummaryMaxChars = parseIntegerEnv(
+  process.env.CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS,
+  2000,
+  'CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS'
+)
+if (contextSummaryMaxChars < 200) {
+  throw new ValidationError('CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS must be at least 200')
 }
 
 export const config = {
@@ -144,8 +181,12 @@ export const config = {
   healthHistoryLimit,
   conversationTtlMs: conversationTtlSeconds * 1000,
   maxConversations,
-  contextWarnChars,
-  contextTargetChars,
+  contextWarnTokens,
+  contextTargetTokens,
+  contextCompactKeepMessages,
+  contextSummaryMaxChars,
+  isolateClaudeCwd: parseBooleanEnvWithDefault(process.env.CLAUDE_API_ISOLATE_CWD, true),
+  claudeCwd: parseOptionalString(process.env.CLAUDE_API_CLAUDE_CWD) || join(tmpdir(), 'claude-empty-workdir'),
   bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),
   corsEnabled: parseBooleanEnv(process.env.CLAUDE_API_CORS),
   strictHealth: parseBooleanEnv(process.env.CLAUDE_API_STRICT_HEALTH),

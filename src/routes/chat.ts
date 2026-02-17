@@ -3,6 +3,7 @@ import { runClaude } from '../clients/claudeCli'
 import { normalizeCliError, ValidationError } from '../core/errors'
 import { config } from '../config/env'
 import { formatChatPrompt } from '../services/chatPrompt'
+import { compactConversationForBudget } from '../services/conversationCompaction'
 import {
   ConversationState,
   createConversation,
@@ -35,13 +36,28 @@ chatRouter.post('/', async (req: Request, res: Response<ChatResponse | ApiErrorR
       workingConversation = createConversation({
         system: body.system,
         message: { role: 'user', content: body.message }
-      })
+      }, body.model)
+    }
+
+    const compactionResult = compactConversationForBudget(
+      workingConversation.messages,
+      workingConversation.system,
+      {
+        model: body.model,
+        targetTokens: config.contextTargetTokens,
+        keepRecentMessages: config.contextCompactKeepMessages,
+        summaryMaxChars: config.contextSummaryMaxChars
+      }
+    )
+    if (compactionResult.compacted) {
+      workingConversation.messages = compactionResult.messages
+      workingConversation.system = compactionResult.system
     }
 
     const prompt = formatChatPrompt(workingConversation.messages, workingConversation.system)
     const response = await runClaude(prompt, req.requestId!, body.model)
     workingConversation.messages.push({ role: 'assistant', content: response })
-    saveConversation(workingConversation)
+    saveConversation(workingConversation, body.model)
 
     const assistantMessage: Message = { role: 'assistant', content: response }
     const payload: ChatResponse = {
@@ -55,11 +71,15 @@ chatRouter.post('/', async (req: Request, res: Response<ChatResponse | ApiErrorR
         expires_at: workingConversation.expiresAt
       },
       context: {
-        chars_used: workingConversation.charsUsed,
-        warn_chars: config.contextWarnChars,
-        target_chars: config.contextTargetChars,
-        over_warn: workingConversation.charsUsed >= config.contextWarnChars,
-        over_target: workingConversation.charsUsed >= config.contextTargetChars
+        // NOTE: tokens_used is an estimate derived from local conversation text.
+        // TODO: Switch to authoritative token usage once available from Claude CLI.
+        tokens_used: workingConversation.tokensUsed,
+        warn_tokens: config.contextWarnTokens,
+        target_tokens: config.contextTargetTokens,
+        over_warn: workingConversation.tokensUsed >= config.contextWarnTokens,
+        over_target: workingConversation.tokensUsed >= config.contextTargetTokens,
+        compacted: compactionResult.compacted,
+        compacted_messages: compactionResult.compactedMessages
       }
     }
     res.json(payload)

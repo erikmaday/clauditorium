@@ -1,13 +1,13 @@
 import { Message } from '../types/api'
 import { randomUUID } from 'crypto'
 import { config } from '../config/env'
-import { formatChatPrompt } from './chatPrompt'
+import { estimateConversationTokens } from './tokenBudget'
 
 export interface ConversationState {
   id: string
   system?: string
   messages: Message[]
-  charsUsed: number
+  tokensUsed: number
   createdAt: string
   updatedAt: string
   expiresAt: string
@@ -20,7 +20,7 @@ export function getConversation(conversationId: string): ConversationState | und
   return conversations.get(conversationId)
 }
 
-export function createConversation(initial: { system?: string; message: Message }): ConversationState {
+export function createConversation(initial: { system?: string; message: Message }, model?: string): ConversationState {
   pruneExpiredConversations()
   ensureCapacityForNewConversation()
 
@@ -30,20 +30,20 @@ export function createConversation(initial: { system?: string; message: Message 
     id,
     system: initial.system,
     messages: [initial.message],
-    charsUsed: 0,
+    tokensUsed: 0,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + config.conversationTtlMs).toISOString()
   }
-  updateConversationStats(state)
+  updateConversationStats(state, model)
   conversations.set(id, state)
   return state
 }
 
-export function saveConversation(state: ConversationState): void {
+export function saveConversation(state: ConversationState, model?: string): void {
   state.updatedAt = new Date().toISOString()
   state.expiresAt = new Date(Date.now() + config.conversationTtlMs).toISOString()
-  updateConversationStats(state)
+  updateConversationStats(state, model)
   conversations.set(state.id, state)
   pruneExpiredConversations()
   ensureCapacity()
@@ -57,8 +57,8 @@ export function clearConversations(): void {
   conversations.clear()
 }
 
-function updateConversationStats(state: ConversationState): void {
-  state.charsUsed = formatChatPrompt(state.messages, state.system).length
+function updateConversationStats(state: ConversationState, model?: string): void {
+  state.tokensUsed = estimateConversationTokens(state.messages, state.system, model)
 }
 
 function pruneExpiredConversations(nowMs: number = Date.now()): void {
