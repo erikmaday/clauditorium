@@ -2,6 +2,41 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.4.0] - 2026-02-17
+
+### Breaking Changes
+- `POST /chat` request contract changed:
+  - `messages` input is no longer accepted.
+  - `message` is now required for both new and continuing conversations.
+  - `system` is only valid when creating a new conversation (without `conversation_id`).
+
+### Added
+- Conversation lifecycle APIs:
+  - `GET /chat/{conversation_id}` for metadata (status, message count, token estimate, timestamps).
+  - `DELETE /chat/{conversation_id}` for explicit conversation cleanup.
+- Conversation memory guardrails:
+  - configurable TTL and max in-memory conversations.
+- Token-aware context budgeting metadata and automatic context compaction for long-running chats.
+- Runtime concurrency controls for Claude CLI execution:
+  - max concurrent workers, bounded queue, queue timeout, and queue-related error codes.
+- Structured JSON logging and Prometheus metrics via `GET /metrics`.
+- Graceful shutdown drain mode:
+  - rejects new `POST /ask`/`POST /chat` during drain (`503 shutting_down`),
+  - waits for in-flight/queued Claude jobs to finish before exit.
+- OpenAPI-first contract governance enhancements:
+  - generated TS type sync check (`openapi:types:check`) wired into `api:contract:check`.
+- Container-consumer smoke test script (`scripts/smoke-container.sh`) and CI coverage for Docker consumer flows.
+
+### Changed
+- OpenAPI contract expanded to include:
+  - chat lifecycle endpoints,
+  - richer `ChatResponse` metadata (`conversation`, `context`),
+  - graceful shutdown `503` responses for `/ask` and `/chat`.
+- Runtime stack/tooling upgrades:
+  - Express 5 runtime alignment,
+  - Vitest 4 and ESLint 10 upgrades.
+- README expanded with compatibility notes, container-consumer guidance, metrics/observability coverage, and updated chat usage examples.
+
 ## [1.3.0] - 2026-02-17
 
 ### Documentation
