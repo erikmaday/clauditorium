@@ -95,6 +95,23 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ChatRequest'
+            examples:
+              startConversation:
+                summary: Start a conversation with history
+                value:
+                  messages:
+                    - role: user
+                      content: My name is Erik.
+                    - role: assistant
+                      content: Nice to meet you, Erik.
+                    - role: user
+                      content: What did I just tell you?
+                  system: You are concise.
+              continueConversation:
+                summary: Continue existing conversation
+                value:
+                  conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+                  message: Remind me what you know about me.
       responses:
         '200':
           description: Successful response
@@ -289,23 +306,6 @@ components:
       anyOf:
         - required: [messages]
         - required: [message]
-      examples:
-        startConversation:
-          summary: Start a conversation with history
-          value:
-            messages:
-              - role: user
-                content: My name is Erik.
-              - role: assistant
-                content: Nice to meet you, Erik.
-              - role: user
-                content: What did I just tell you?
-            system: You are concise.
-        continueConversation:
-          summary: Continue existing conversation
-          value:
-            conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
-            message: Remind me what you know about me.
       properties:
         messages:
           type: array
