@@ -11,7 +11,9 @@ export interface AskRequest {
 }
 
 export interface ChatRequest {
-  messages: Message[]
+  messages?: Message[]
+  message?: string
+  conversationId?: string
   system?: string
   model?: string
 }

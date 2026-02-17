@@ -58,8 +58,8 @@ export function parseChatRequest(body: unknown): ChatRequest {
   }
 
   const messagesValue = (body as Record<string, unknown>).messages
-  if (!Array.isArray(messagesValue) || messagesValue.length === 0) {
-    throw new ValidationError('messages array is required and must not be empty')
+  if (messagesValue !== undefined && (!Array.isArray(messagesValue) || messagesValue.length === 0)) {
+    throw new ValidationError('messages must be a non-empty array when provided')
   }
 
   const systemValue = (body as Record<string, unknown>).system
@@ -67,8 +67,24 @@ export function parseChatRequest(body: unknown): ChatRequest {
     throw new ValidationError('system must be a non-empty string when provided')
   }
 
+  const messageValue = (body as Record<string, unknown>).message
+  if (messageValue !== undefined && !isNonEmptyString(messageValue)) {
+    throw new ValidationError('message must be a non-empty string when provided')
+  }
+
+  const conversationIdValue = (body as Record<string, unknown>).conversation_id
+  if (conversationIdValue !== undefined && !isNonEmptyString(conversationIdValue)) {
+    throw new ValidationError('conversation_id must be a non-empty string when provided')
+  }
+
+  if (messagesValue === undefined && messageValue === undefined) {
+    throw new ValidationError('provide either messages or message')
+  }
+
   return {
-    messages: messagesValue.map(parseMessage),
+    messages: Array.isArray(messagesValue) ? messagesValue.map(parseMessage) : undefined,
+    message: messageValue as string | undefined,
+    conversationId: conversationIdValue as string | undefined,
     system: systemValue as string | undefined,
     model: parseModel((body as Record<string, unknown>).model)
   }

@@ -35,4 +35,23 @@ describe('parseChatRequest', () => {
   it('throws when a message has empty content', () => {
     expect(() => parseChatRequest({ messages: [{ role: 'user', content: '' }] })).toThrow(ValidationError)
   })
+
+  it('parses continuation request with conversation_id + message', () => {
+    const result = parseChatRequest({
+      conversation_id: 'conv-123',
+      message: 'next question'
+    })
+
+    expect(result).toEqual({
+      conversationId: 'conv-123',
+      message: 'next question',
+      messages: undefined,
+      system: undefined,
+      model: undefined
+    })
+  })
+
+  it('throws when neither messages nor message is provided', () => {
+    expect(() => parseChatRequest({ conversation_id: 'conv-123' })).toThrow(ValidationError)
+  })
 })

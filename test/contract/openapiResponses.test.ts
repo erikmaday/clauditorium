@@ -118,7 +118,24 @@ describe('OpenAPI response contract', () => {
     const response = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hi' }] })
 
     expect(response.status).toBe(200)
+    expect(response.body.conversation_id).toBeTypeOf('string')
     expectOpenApi('/chat', 'post', response.status, response.body)
+  })
+
+  it('validates /chat 200 continuation with conversation_id', async () => {
+    mockedRunClaude.mockResolvedValueOnce('first')
+    mockedRunClaude.mockResolvedValueOnce('second')
+    const app = await createFreshApp()
+
+    const first = await request(app).post('/chat').send({ messages: [{ role: 'user', content: 'hi' }] })
+    const second = await request(app).post('/chat').send({
+      conversation_id: first.body.conversation_id,
+      message: 'follow up'
+    })
+
+    expect(second.status).toBe(200)
+    expect(second.body.conversation_id).toBe(first.body.conversation_id)
+    expectOpenApi('/chat', 'post', second.status, second.body)
   })
 
   it('validates /chat 400', async () => {

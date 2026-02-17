@@ -33,7 +33,7 @@ That's it. Server runs on `http://localhost:5051`.
 
 - Simple REST API for Claude
 - Per-request model selection via `model` parameter
-- Multi-turn chat with message history
+- Multi-turn chat with server-managed `conversation_id` context
 - Configurable via environment variables
 - Request tracking with unique IDs
 - Environment and request validation with consistent error responses
@@ -98,7 +98,7 @@ Any endpoint, request/response shape, status code, or auth requirement change mu
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/ask` | POST | Send a prompt, get a response |
-| `/chat` | POST | Chat with message history |
+| `/chat` | POST | Chat with persistent `conversation_id` context |
 | `/health` | GET | Health check |
 | `/health/history` | GET | Recent Claude CLI readiness check history |
 | `/health/recheck` | POST | Re-run Claude CLI readiness check |
@@ -129,6 +129,8 @@ curl -X POST http://localhost:5051/ask \
 
 ### POST /chat
 
+Start a new conversation (response returns `conversation_id`):
+
 ```bash
 curl -X POST http://localhost:5051/chat \
   -H "Content-Type: application/json" \
@@ -143,7 +145,21 @@ curl -X POST http://localhost:5051/chat \
   }'
 ```
 
+Continue the same chat without resending full history:
+
+```bash
+curl -X POST http://localhost:5051/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "YOUR_CONVERSATION_ID",
+    "message": "Can you summarize that?"
+  }'
+```
+
+If `conversation_id` is unknown/expired, `/chat` returns `400 validation_error`.
+
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
+`/chat` responses include `conversation_id`, which you can reuse for continuation calls.
 
 If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
 

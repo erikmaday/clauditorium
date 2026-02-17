@@ -74,7 +74,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /chat:
     post:
-      summary: Send chat history and receive the next assistant message
+      summary: Send chat input and receive the next assistant message with persistent conversation context
+      description: Start with `messages` to create a conversation, then continue with `conversation_id` + `message`.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -280,25 +281,60 @@ components:
           type: string
     ChatRequest:
       type: object
-      required: [messages]
+      anyOf:
+        - required: [messages]
+        - required: [message]
+      examples:
+        startConversation:
+          summary: Start a conversation with history
+          value:
+            messages:
+              - role: user
+                content: My name is Erik.
+              - role: assistant
+                content: Nice to meet you, Erik.
+              - role: user
+                content: What did I just tell you?
+            system: You are concise.
+        continueConversation:
+          summary: Continue existing conversation
+          value:
+            conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+            message: Remind me what you know about me.
       properties:
         messages:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/Message'
+          description: Full history to append to conversation context for this call.
+        message:
+          type: string
+          description: Single user message for continuation calls.
+        conversation_id:
+          type: string
+          description: Existing conversation ID from prior /chat response.
         system:
           type: string
         model:
           type: string
       additionalProperties: false
+      description: Provide at least one of messages or message.
     ChatResponse:
       type: object
-      required: [success, message]
+      required: [success, conversation_id, message]
+      example:
+        success: true
+        conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+        message:
+          role: assistant
+          content: You told me your name is Erik.
       properties:
         success:
           type: boolean
           enum: [true]
+        conversation_id:
+          type: string
         message:
           $ref: '#/components/schemas/Message'
     Readiness:

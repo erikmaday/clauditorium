@@ -1,6 +1,7 @@
 import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../../src/app'
+import { clearConversations } from '../../src/services/conversationStore'
 
 const { mockedRunClaude } = vi.hoisted(() => ({
   mockedRunClaude: vi.fn()
@@ -13,6 +14,7 @@ vi.mock('../../src/clients/claudeCli', () => ({
 describe('app integration', () => {
   beforeEach(() => {
     mockedRunClaude.mockReset()
+    clearConversations()
   })
 
   it('returns health status', async () => {
@@ -95,8 +97,47 @@ describe('app integration', () => {
     expect(response.status).toBe(200)
     expect(response.body).toEqual({
       success: true,
+      conversation_id: expect.any(String),
       message: { role: 'assistant', content: 'chat reply' }
     })
+  })
+
+  it('retains context between /chat calls using conversation_id', async () => {
+    mockedRunClaude.mockResolvedValueOnce('first reply')
+    mockedRunClaude.mockResolvedValueOnce('second reply')
+
+    const app = createApp()
+    const first = await request(app).post('/chat').send({
+      messages: [{ role: 'user', content: 'hello' }]
+    })
+
+    expect(first.status).toBe(200)
+    expect(first.body.conversation_id).toBeTypeOf('string')
+
+    const second = await request(app).post('/chat').send({
+      conversation_id: first.body.conversation_id,
+      message: 'follow up'
+    })
+
+    expect(second.status).toBe(200)
+    expect(second.body.conversation_id).toBe(first.body.conversation_id)
+    expect(second.body.message).toEqual({ role: 'assistant', content: 'second reply' })
+    expect(mockedRunClaude).toHaveBeenCalledTimes(2)
+    expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('User: hello')
+    expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('Assistant: first reply')
+    expect(mockedRunClaude.mock.calls[1]?.[0]).toContain('User: follow up')
+  })
+
+  it('returns validation error when conversation_id is unknown', async () => {
+    const app = createApp()
+    const response = await request(app).post('/chat').send({
+      conversation_id: 'missing-conversation',
+      message: 'hello?'
+    })
+
+    expect(response.status).toBe(400)
+    expect(response.body.error).toBe('validation_error')
+    expect(response.body.message).toBe('conversation_id was not found')
   })
 
   it('returns normalized cli error on /chat failure', async () => {
