@@ -2,6 +2,7 @@ import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../../src/app'
 import { clearConversations } from '../../src/services/conversationStore'
+import { clearDrainModeForTests, startDrainMode } from '../../src/services/shutdown'
 
 const { mockedRunClaude } = vi.hoisted(() => ({
   mockedRunClaude: vi.fn()
@@ -22,6 +23,7 @@ describe('app integration', () => {
     mockedRunClaude.mockReset()
     mockedListAvailableModels.mockReset()
     clearConversations()
+    clearDrainModeForTests()
   })
 
   it('returns health status', async () => {
@@ -183,6 +185,36 @@ describe('app integration', () => {
     expect(deleteMissingResponse.body.deleted).toBe(false)
   })
 
+  it('returns conversation lifecycle metadata by id', async () => {
+    mockedRunClaude.mockResolvedValueOnce('first reply')
+
+    const app = createApp()
+    const created = await request(app).post('/chat').send({ message: 'hello' })
+    const metadata = await request(app).get(`/chat/${created.body.conversation_id}`)
+
+    expect(metadata.status).toBe(200)
+    expect(metadata.body).toEqual({
+      success: true,
+      conversation_id: created.body.conversation_id,
+      status: 'active',
+      message_count: expect.any(Number),
+      tokens_used: expect.any(Number),
+      last_activity_at: expect.any(String),
+      created_at: expect.any(String),
+      expires_at: expect.any(String),
+      request_id: expect.any(String)
+    })
+  })
+
+  it('returns not found for unknown conversation metadata id', async () => {
+    const app = createApp()
+    const response = await request(app).get('/chat/missing-conversation')
+
+    expect(response.status).toBe(404)
+    expect(response.body.error).toBe('not_found')
+    expect(response.body.message).toBe('conversation_id was not found')
+  })
+
   it('returns validation error when system is sent with conversation_id', async () => {
     const app = createApp()
     const response = await request(app).post('/chat').send({
@@ -236,5 +268,19 @@ describe('app integration', () => {
     expect(response.status).toBe(404)
     expect(response.body.error).toBe('not_found')
     expect(response.body.request_id).toBeDefined()
+  })
+
+  it('rejects new Claude requests while draining', async () => {
+    startDrainMode('SIGTERM')
+    const app = createApp()
+
+    const ask = await request(app).post('/ask').send({ prompt: 'hello' })
+    const chat = await request(app).post('/chat').send({ message: 'hello' })
+
+    expect(ask.status).toBe(503)
+    expect(ask.body.error).toBe('shutting_down')
+    expect(chat.status).toBe(503)
+    expect(chat.body.error).toBe('shutting_down')
+    expect(mockedRunClaude).not.toHaveBeenCalled()
   })
 })

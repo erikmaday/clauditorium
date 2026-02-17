@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { runClaude } from '../clients/claudeCli'
 import { normalizeCliError, ValidationError } from '../core/errors'
 import { config } from '../config/env'
+import { rejectDuringDrainMiddleware } from '../middleware/drainMode'
 import { formatChatPrompt } from '../services/chatPrompt'
 import { compactConversationForBudget } from '../services/conversationCompaction'
 import {
@@ -11,12 +12,26 @@ import {
   getConversation,
   saveConversation
 } from '../services/conversationStore'
-import { ApiErrorResponse, ChatResponse, DeleteConversationResponse, Message } from '../types/api'
+import {
+  ApiErrorResponse,
+  ChatConversationMetadataResponse,
+  ChatResponse,
+  DeleteConversationResponse,
+  Message
+} from '../types/api'
 import { parseChatRequest } from './schemas'
 
 const chatRouter = Router()
 
-chatRouter.post('/', async (req: Request, res: Response<ChatResponse | ApiErrorResponse>) => {
+function normalizeConversationId(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+
+  return value
+}
+
+chatRouter.post('/', rejectDuringDrainMiddleware, async (req: Request, res: Response<ChatResponse | ApiErrorResponse>) => {
   try {
     const body = parseChatRequest(req.body)
     let workingConversation: ConversationState
@@ -103,11 +118,44 @@ chatRouter.post('/', async (req: Request, res: Response<ChatResponse | ApiErrorR
   }
 })
 
+chatRouter.get('/:conversation_id', (req: Request, res: Response<ChatConversationMetadataResponse | ApiErrorResponse>) => {
+  const conversationId = normalizeConversationId(req.params.conversation_id)
+
+  if (!conversationId || conversationId.trim().length === 0) {
+    res.status(400).json({
+      error: 'validation_error',
+      message: 'conversation_id path parameter is required',
+      request_id: req.requestId
+    })
+    return
+  }
+
+  const conversation = getConversation(conversationId)
+  if (!conversation) {
+    res.status(404).json({
+      error: 'not_found',
+      message: 'conversation_id was not found',
+      request_id: req.requestId
+    })
+    return
+  }
+
+  const payload: ChatConversationMetadataResponse = {
+    success: true,
+    conversation_id: conversation.id,
+    status: 'active',
+    message_count: conversation.messages.length,
+    tokens_used: conversation.tokensUsed,
+    last_activity_at: conversation.updatedAt,
+    created_at: conversation.createdAt,
+    expires_at: conversation.expiresAt,
+    request_id: req.requestId || 'unknown'
+  }
+  res.json(payload)
+})
+
 chatRouter.delete('/:conversation_id', (req: Request, res: Response<DeleteConversationResponse | ApiErrorResponse>) => {
-  const conversationIdValue = req.params.conversation_id
-  const conversationId = Array.isArray(conversationIdValue)
-    ? conversationIdValue[0]
-    : conversationIdValue
+  const conversationId = normalizeConversationId(req.params.conversation_id)
 
   if (!conversationId || conversationId.trim().length === 0) {
     res.status(400).json({

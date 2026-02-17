@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express'
 import { runClaude } from '../clients/claudeCli'
 import { normalizeCliError, ValidationError } from '../core/errors'
+import { rejectDuringDrainMiddleware } from '../middleware/drainMode'
 import { ApiErrorResponse, AskResponse } from '../types/api'
 import { parseAskRequest } from './schemas'
 
 const askRouter = Router()
 
-askRouter.post('/', async (req: Request, res: Response<AskResponse | ApiErrorResponse>) => {
+askRouter.post('/', rejectDuringDrainMiddleware, async (req: Request, res: Response<AskResponse | ApiErrorResponse>) => {
   try {
     const body = parseAskRequest(req.body)
     const response = await runClaude(body.prompt, req.requestId!, body.model)

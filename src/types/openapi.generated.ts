@@ -85,6 +85,15 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Service is draining for graceful shutdown */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /** @description Claude CLI request timeout */
                 504: {
                     headers: {
@@ -185,6 +194,15 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description Service is draining for graceful shutdown */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /** @description Claude CLI request timeout */
                 504: {
                     headers: {
@@ -209,7 +227,59 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get conversation lifecycle metadata from in-memory store */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversation_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation lifecycle metadata */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatConversationMetadataResponse"];
+                    };
+                };
+                /** @description Invalid or missing API key */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Conversation not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Rate limited */
+                429: {
+                    headers: {
+                        "Retry-After"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"] & {
+                            retry_after_seconds?: number;
+                        };
+                    };
+                };
+            };
+        };
         put?: never;
         post?: never;
         /** Delete a conversation from in-memory store */
@@ -574,6 +644,22 @@ export interface components {
             success: true;
             conversation_id: string;
             deleted: boolean;
+            request_id: string;
+        };
+        ChatConversationMetadataResponse: {
+            /** @enum {boolean} */
+            success: true;
+            conversation_id: string;
+            /** @enum {string} */
+            status: "active";
+            message_count: number;
+            tokens_used: number;
+            /** Format: date-time */
+            last_activity_at: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
             request_id: string;
         };
         ModelsResponse: {

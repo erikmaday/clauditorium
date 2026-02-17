@@ -198,6 +198,15 @@ if (contextSummaryMaxChars < 200) {
   throw new ValidationError('CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS must be at least 200')
 }
 
+const drainTimeoutSeconds = parseIntegerEnv(
+  process.env.CLAUDE_API_DRAIN_TIMEOUT_SECONDS,
+  30,
+  'CLAUDE_API_DRAIN_TIMEOUT_SECONDS'
+)
+if (drainTimeoutSeconds < 1) {
+  throw new ValidationError('CLAUDE_API_DRAIN_TIMEOUT_SECONDS must be at least 1 second')
+}
+
 export const config = {
   host: process.env.CLAUDE_API_HOST || '127.0.0.1',
   port,
@@ -215,6 +224,7 @@ export const config = {
   contextTargetTokens,
   contextCompactKeepMessages,
   contextSummaryMaxChars,
+  shutdownDrainTimeoutMs: drainTimeoutSeconds * 1000,
   isolateClaudeCwd: parseBooleanEnvWithDefault(process.env.CLAUDE_API_ISOLATE_CWD, true),
   claudeCwd: parseOptionalString(process.env.CLAUDE_API_CLAUDE_CWD) || join(tmpdir(), 'claude-empty-workdir'),
   bodyLimit: parseBodyLimit(process.env.CLAUDE_API_BODY_LIMIT),

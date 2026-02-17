@@ -111,6 +111,17 @@ describe('OpenAPI response contract', () => {
     expectOpenApi('/ask', 'post', response.status, response.body)
   })
 
+  it('validates /ask 503 during drain mode', async () => {
+    const app = await createFreshApp()
+    const { startDrainMode } = await import('../../src/services/shutdown')
+    startDrainMode('SIGTERM')
+
+    const response = await request(app).post('/ask').send({ prompt: 'hello' })
+
+    expect(response.status).toBe(503)
+    expectOpenApi('/ask', 'post', response.status, response.body)
+  })
+
   it('validates /chat 200', async () => {
     mockedRunClaude.mockResolvedValueOnce('chat reply')
     const app = await createFreshApp()
@@ -215,6 +226,17 @@ describe('OpenAPI response contract', () => {
     expectOpenApi('/chat', 'post', response.status, response.body)
   })
 
+  it('validates /chat 503 during drain mode', async () => {
+    const app = await createFreshApp()
+    const { startDrainMode } = await import('../../src/services/shutdown')
+    startDrainMode('SIGTERM')
+
+    const response = await request(app).post('/chat').send({ message: 'hello' })
+
+    expect(response.status).toBe(503)
+    expectOpenApi('/chat', 'post', response.status, response.body)
+  })
+
   it('validates /chat/{conversation_id} delete 200', async () => {
     mockedRunClaude.mockResolvedValueOnce('chat reply')
     const app = await createFreshApp()
@@ -224,6 +246,26 @@ describe('OpenAPI response contract', () => {
 
     expect(deleted.status).toBe(200)
     expectOpenApi('/chat/{conversation_id}', 'delete', deleted.status, deleted.body)
+  })
+
+  it('validates /chat/{conversation_id} get 200', async () => {
+    mockedRunClaude.mockResolvedValueOnce('chat reply')
+    const app = await createFreshApp()
+
+    const created = await request(app).post('/chat').send({ message: 'hi' })
+    const metadata = await request(app).get(`/chat/${created.body.conversation_id}`)
+
+    expect(metadata.status).toBe(200)
+    expectOpenApi('/chat/{conversation_id}', 'get', metadata.status, metadata.body)
+  })
+
+  it('validates /chat/{conversation_id} get 404', async () => {
+    const app = await createFreshApp()
+
+    const metadata = await request(app).get('/chat/missing-conversation')
+
+    expect(metadata.status).toBe(404)
+    expectOpenApi('/chat/{conversation_id}', 'get', metadata.status, metadata.body)
   })
 
   it('validates /health 200 and /health 503', async () => {

@@ -158,6 +158,7 @@ npm run openapi:types:generate
 |----------|--------|-------------|
 | `/ask` | POST | Send a prompt, get a response |
 | `/chat` | POST | Chat with persistent `conversation_id` context |
+| `/chat/:conversation_id` | GET | Get conversation lifecycle metadata |
 | `/chat/:conversation_id` | DELETE | Delete conversation from in-memory store |
 | `/models` | GET | List available Claude models discovered from local CLI binary |
 | `/health` | GET | Health check |
@@ -221,6 +222,12 @@ If `conversation_id` is unknown/expired, `/chat` returns `400 validation_error`.
 
 ```bash
 curl -X DELETE http://localhost:5051/chat/YOUR_CONVERSATION_ID
+```
+
+### GET /chat/:conversation_id
+
+```bash
+curl http://localhost:5051/chat/YOUR_CONVERSATION_ID
 ```
 
 ### GET /models
@@ -341,6 +348,7 @@ Set these environment variables to customize behavior:
 | `CLAUDE_API_MAX_CONCURRENT` | `4` | Max concurrent Claude subprocesses |
 | `CLAUDE_API_MAX_QUEUE` | `100` | Max queued Claude requests waiting for a slot |
 | `CLAUDE_API_QUEUE_TIMEOUT_MS` | `15000` | Max queue wait time before request fails |
+| `CLAUDE_API_DRAIN_TIMEOUT_SECONDS` | `30` | Graceful shutdown drain timeout for in-flight Claude jobs (seconds) |
 | `CLAUDE_API_RATE_LIMIT_WINDOW_SECONDS` | `60` | Per-IP rate-limit window for `/ask` and `/chat` (seconds) |
 | `CLAUDE_API_RATE_LIMIT_MAX_REQUESTS` | `0` | Max requests per IP per window (`0` disables rate limiting) |
 | `CLAUDE_API_HEALTH_HISTORY_LIMIT` | `25` | Max readiness entries retained in memory |

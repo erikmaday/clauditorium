@@ -28,6 +28,7 @@ describe('config/env', () => {
     expect(config.contextTargetTokens).toBe(18000)
     expect(config.contextCompactKeepMessages).toBe(6)
     expect(config.contextSummaryMaxChars).toBe(2000)
+    expect(config.shutdownDrainTimeoutMs).toBe(30000)
     expect(config.isolateClaudeCwd).toBe(true)
     expect(config.claudeCwd).toBeTypeOf('string')
     expect(config.bodyLimit).toBe('1mb')
@@ -82,6 +83,7 @@ describe('config/env', () => {
       contextTargetTokens: 7000,
       contextCompactKeepMessages: 4,
       contextSummaryMaxChars: 1000,
+      shutdownDrainTimeoutMs: 30000,
       isolateClaudeCwd: false,
       claudeCwd: '/tmp/custom-claude-dir',
       bodyLimit: '2mb',
@@ -183,6 +185,13 @@ describe('config/env', () => {
     process.env = { CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS: '199' }
     await expect(import('../../src/config/env')).rejects.toThrow(
       'CLAUDE_API_CONTEXT_SUMMARY_MAX_CHARS must be at least 200'
+    )
+  })
+
+  it('throws when drain timeout is below minimum', async () => {
+    process.env = { CLAUDE_API_DRAIN_TIMEOUT_SECONDS: '0' }
+    await expect(import('../../src/config/env')).rejects.toThrow(
+      'CLAUDE_API_DRAIN_TIMEOUT_SECONDS must be at least 1 second'
     )
   })
 })
