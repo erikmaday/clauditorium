@@ -84,6 +84,7 @@ Coverage thresholds are enforced in CI via `npm run test:coverage`.
 | `/ask` | POST | Send a prompt, get a response |
 | `/chat` | POST | Chat with message history |
 | `/health` | GET | Health check |
+| `/health/history` | GET | Recent Claude CLI readiness check history |
 | `/health/recheck` | POST | Re-run Claude CLI readiness check |
 | `/version` | GET | Version info |
 
@@ -131,7 +132,34 @@ If `CLAUDE_API_KEY` is set, requests to `/ask` and `/chat` must include:
 
 `/health` now includes readiness details for Claude CLI. With `CLAUDE_API_STRICT_HEALTH=true`, `/health` returns `503` when Claude CLI is not ready.
 
+`GET /health/history` returns an in-memory rolling window of recent readiness checks for diagnostics.
+
 `POST /health/recheck` triggers a new Claude CLI readiness check without restarting the server. This endpoint requires `x-api-key` and returns `503` if `CLAUDE_API_KEY` is not configured.
+
+## Error Taxonomy
+
+| Error Code | Typical HTTP Status | Retryable? | Client Action |
+|------------|---------------------|------------|---------------|
+| `validation_error` | `400` | No | Fix request body or env value |
+| `unauthorized` | `401` | No | Provide correct `x-api-key` |
+| `not_found` | `404` | No | Correct endpoint path/method |
+| `payload_too_large` | `413` | No | Reduce request payload size |
+| `timeout` | `504` | Yes | Retry with simpler prompt or higher timeout |
+| `cli_error` | `500` | Sometimes | Check Claude CLI stderr/auth/session |
+| `spawn_error` | `500` | Sometimes | Verify Claude CLI install and PATH |
+| `unknown_error` | `500` | Yes | Retry; inspect logs if persistent |
+| `internal_error` | `500` | Yes | Retry; inspect server logs |
+| `api_key_not_configured` | `503` | No | Set `CLAUDE_API_KEY` on server |
+
+Sample error response:
+
+```json
+{
+  "error": "validation_error",
+  "message": "prompt is required",
+  "request_id": "a1b2c3d4"
+}
+```
 
 ## Configuration
 

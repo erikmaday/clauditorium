@@ -4,6 +4,7 @@ import { strictApiKeyMiddleware } from '../middleware/apiKey'
 import {
   checkClaudeCliReadiness,
   getClaudeCliReadiness,
+  getClaudeCliReadinessHistory,
   getProcessObservability
 } from '../services/readiness'
 
@@ -36,6 +37,13 @@ healthRouter.post('/recheck', strictApiKeyMiddleware, (_req: Request, res: Respo
   checkClaudeCliReadiness()
   const { statusCode, payload } = buildHealthResponse()
   res.status(statusCode).json(payload)
+})
+
+healthRouter.get('/history', (_req: Request, res: Response) => {
+  res.json({
+    observability: getProcessObservability(),
+    history: getClaudeCliReadinessHistory()
+  })
 })
 
 export { healthRouter }

@@ -13,6 +13,7 @@ function printBanner(): void {
   console.log(`  POST /ask     - Simple prompt/response`)
   console.log(`  POST /chat    - Chat with message history`)
   console.log(`  GET  /health  - Health check`)
+  console.log(`  GET  /health/history - Readiness check history`)
   console.log(`  POST /health/recheck - Re-run readiness check (API key required)`)
   console.log(`  GET  /version - API version info`)
   console.log(`\nConfiguration:`)

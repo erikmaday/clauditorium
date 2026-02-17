@@ -52,6 +52,7 @@ async function loadAppWithMockedReadiness(
         ? { version: 'claude 1.0.0' }
         : { error: 'claude not found' })
     }),
+    getClaudeCliReadinessHistory: () => [],
     getProcessObservability: () => ({
       started_at: '2026-01-01T00:00:00.000Z',
       uptime_seconds: 123.456
@@ -159,6 +160,7 @@ describe('runtime hardening', () => {
     vi.doMock('../../src/services/readiness', () => ({
       checkClaudeCliReadiness,
       getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
+      getClaudeCliReadinessHistory: () => [],
       getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
     }))
     const { createApp } = await import('../../src/app')
@@ -191,6 +193,7 @@ describe('runtime hardening', () => {
         signal: null,
         version: 'claude 1.0.0'
       }),
+      getClaudeCliReadinessHistory: () => [],
       getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
     }))
     const { createApp } = await import('../../src/app')
@@ -202,5 +205,42 @@ describe('runtime hardening', () => {
     expect(response.body.status).toBe('ok')
     expect(response.body.readiness.claude_cli.check_duration_ms).toBe(10.2)
     expect(checkClaudeCliReadiness).toHaveBeenCalledOnce()
+  })
+
+  it('returns readiness history', async () => {
+    process.env = { ...ORIGINAL_ENV }
+    vi.doMock('../../src/services/readiness', () => ({
+      checkClaudeCliReadiness: vi.fn(),
+      getClaudeCliReadiness: () => ({ status: 'ready', checked_at: '2026-01-01T00:00:00.000Z' }),
+      getClaudeCliReadinessHistory: () => [
+        {
+          status: 'ready',
+          checked_at: '2026-01-01T00:00:00.000Z',
+          check_duration_ms: 8.5,
+          exit_code: 0,
+          signal: null,
+          version: 'claude 1.0.0'
+        },
+        {
+          status: 'not_ready',
+          checked_at: '2026-01-01T00:05:00.000Z',
+          check_duration_ms: 10.2,
+          exit_code: 1,
+          signal: null,
+          error: 'claude not found'
+        }
+      ],
+      getProcessObservability: () => ({ started_at: '2026-01-01T00:00:00.000Z', uptime_seconds: 123.456 })
+    }))
+    const { createApp } = await import('../../src/app')
+    const app = createApp()
+
+    const response = await request(app).get('/health/history')
+
+    expect(response.status).toBe(200)
+    expect(response.body.observability.started_at).toBe('2026-01-01T00:00:00.000Z')
+    expect(response.body.history).toHaveLength(2)
+    expect(response.body.history[0].status).toBe('ready')
+    expect(response.body.history[1].status).toBe('not_ready')
   })
 })
