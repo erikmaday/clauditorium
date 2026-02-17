@@ -140,8 +140,15 @@ describe('runtime hardening', () => {
     await request(app).get('/health')
 
     const emitted = consoleSpy.mock.calls.some((call) => {
-      const line = String(call[0])
-      return line.includes('Completed GET /health 200 in')
+      try {
+        const payload = JSON.parse(String(call[0]).trim())
+        return payload.event === 'http_request_completed'
+          && payload.method === 'GET'
+          && payload.path === '/health'
+          && payload.status_code === 200
+      } catch {
+        return false
+      }
     })
 
     expect(emitted).toBe(true)

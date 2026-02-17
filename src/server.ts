@@ -17,6 +17,7 @@ function printBanner(): void {
   console.log(`  GET  /health  - Health check`)
   console.log(`  GET  /health/history - Readiness check history`)
   console.log(`  POST /health/recheck - Re-run readiness check (API key required)`)
+  console.log(`  GET  /metrics - Prometheus metrics`)
   console.log(`  GET  /version - API version info`)
   console.log(`\nConfiguration:`)
   console.log(`  Host: ${config.host}`)

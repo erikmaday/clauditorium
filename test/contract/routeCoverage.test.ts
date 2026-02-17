@@ -3,13 +3,15 @@ import { askRouter } from '../../src/routes/ask'
 import { chatRouter } from '../../src/routes/chat'
 import { docsRouter } from '../../src/routes/docs'
 import { healthRouter } from '../../src/routes/health'
+import { metricsRouter } from '../../src/routes/metrics'
 import { modelsRouter } from '../../src/routes/models'
 import { versionRouter } from '../../src/routes/version'
 import { getDocumentedOperations } from './openapi.helpers'
 
 const RUNTIME_UNDOCUMENTED_ALLOWLIST = new Set([
   'GET /docs',
-  'GET /openapi.yaml'
+  'GET /openapi.yaml',
+  'GET /metrics'
 ])
 
 function getRuntimeOperations(): Set<string> {
@@ -19,6 +21,7 @@ function getRuntimeOperations(): Set<string> {
     { basePath: '/ask', router: askRouter },
     { basePath: '/chat', router: chatRouter },
     { basePath: '/health', router: healthRouter },
+    { basePath: '/metrics', router: metricsRouter },
     { basePath: '/models', router: modelsRouter },
     { basePath: '/version', router: versionRouter },
     { basePath: '/', router: docsRouter }

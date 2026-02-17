@@ -1,6 +1,11 @@
 import { config } from '../config/env'
 import { createCliError } from '../core/errors'
 import { log } from '../core/logger'
+import {
+  incrementClaudeRuntimeQueueTimeouts,
+  incrementClaudeRuntimeRejected,
+  setClaudeRuntimeState
+} from './metrics'
 
 interface QueueTask<T> {
   requestId: string
@@ -24,6 +29,11 @@ let activeRequests = 0
 let rejectedTotal = 0
 let queueTimeoutsTotal = 0
 
+function syncRuntimeMetrics(): void {
+  setClaudeRuntimeState(activeRequests, queue.length)
+}
+syncRuntimeMetrics()
+
 function getStats(): ClaudeRuntimeStats {
   return {
     active_requests: activeRequests,
@@ -42,12 +52,14 @@ function removeFromQueue(task: QueueTask<unknown>): boolean {
   }
 
   queue.splice(index, 1)
+  syncRuntimeMetrics()
   return true
 }
 
 function startQueuedTask(task: QueueTask<unknown>): void {
   clearTimeout(task.timeout)
   activeRequests += 1
+  syncRuntimeMetrics()
   log('DEBUG', `[${task.requestId}] Starting queued Claude request (active=${activeRequests}, queued=${queue.length})`)
 
   Promise.resolve()
@@ -55,6 +67,7 @@ function startQueuedTask(task: QueueTask<unknown>): void {
     .then(task.resolve, task.reject)
     .finally(() => {
       activeRequests = Math.max(0, activeRequests - 1)
+      syncRuntimeMetrics()
       drainQueue()
     })
 }
@@ -72,17 +85,21 @@ function drainQueue(): void {
 export function enqueueClaudeTask<T>(requestId: string, task: () => Promise<T>): Promise<T> {
   if (activeRequests < config.maxConcurrentClaudeRequests) {
     activeRequests += 1
+    syncRuntimeMetrics()
     log('DEBUG', `[${requestId}] Starting Claude request immediately (active=${activeRequests}, queued=${queue.length})`)
     return Promise.resolve()
       .then(task)
       .finally(() => {
         activeRequests = Math.max(0, activeRequests - 1)
+        syncRuntimeMetrics()
         drainQueue()
       })
   }
 
   if (queue.length >= config.maxClaudeQueueSize) {
     rejectedTotal += 1
+    incrementClaudeRuntimeRejected()
+    syncRuntimeMetrics()
     log('WARN', `[${requestId}] Claude queue full; rejecting request (active=${activeRequests}, queued=${queue.length})`)
     return Promise.reject(
       createCliError(429, 'concurrency_limited', 'Claude runtime is busy. Please retry shortly.', requestId)
@@ -102,6 +119,8 @@ export function enqueueClaudeTask<T>(requestId: string, task: () => Promise<T>):
         }
 
         queueTimeoutsTotal += 1
+        incrementClaudeRuntimeQueueTimeouts()
+        syncRuntimeMetrics()
         log('WARN', `[${requestId}] Claude queue wait timed out (active=${activeRequests}, queued=${queue.length})`)
         reject(
           createCliError(
@@ -115,6 +134,7 @@ export function enqueueClaudeTask<T>(requestId: string, task: () => Promise<T>):
     }
 
     queue.push(queued as QueueTask<unknown>)
+    syncRuntimeMetrics()
     log('DEBUG', `[${requestId}] Queued Claude request (active=${activeRequests}, queued=${queue.length})`)
   })
 }
@@ -131,4 +151,5 @@ export function clearClaudeRuntimeQueueForTests(): void {
   activeRequests = 0
   rejectedTotal = 0
   queueTimeoutsTotal = 0
+  syncRuntimeMetrics()
 }

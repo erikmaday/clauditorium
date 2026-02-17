@@ -26,7 +26,12 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   }
 
   const message = err instanceof Error ? err.message : 'Internal server error'
-  log('ERROR', `[${requestId}] Unhandled server error: ${message}`)
+  log('ERROR', 'Unhandled server error', {
+    event: 'unhandled_error',
+    request_id: requestId,
+    error_code: 'internal_error',
+    message
+  })
 
   res.status(500).json({
     error: 'internal_error',

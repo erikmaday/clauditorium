@@ -15,10 +15,14 @@ describe('logger', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const { log } = await import('../../src/core/logger')
 
-    log('INFO', 'hello')
+    log('INFO', 'hello', { event: 'test_event', request_id: 'req-1' })
 
-    expect(consoleSpy).toHaveBeenCalledOnce()
-    expect(consoleSpy.mock.calls[0][0]).toContain(' - INFO - hello')
+    expect(consoleSpy).toHaveBeenCalled()
+    const payload = JSON.parse(String(consoleSpy.mock.calls[0][0]).trim())
+    expect(payload.service).toBe('claude-api')
+    expect(payload.event).toBe('test_event')
+    expect(payload.request_id).toBe('req-1')
+    expect(payload.message).toBe('hello')
   })
 
   it('does not log when below threshold', async () => {

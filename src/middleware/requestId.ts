@@ -6,6 +6,11 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   const requestId = randomUUID().slice(0, 8)
   req.requestId = requestId
   res.setHeader('X-Request-ID', requestId)
-  log('DEBUG', `[${requestId}] ${req.method} ${req.path}`)
+  log('DEBUG', 'Request started', {
+    event: 'http_request_started',
+    request_id: requestId,
+    method: req.method,
+    path: req.path
+  })
   next()
 }

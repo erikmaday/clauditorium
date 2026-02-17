@@ -21,4 +21,13 @@ describe('documentation endpoints', () => {
     expect(response.text).toContain('/openapi.yaml')
     expect(response.headers['content-type']).toContain('text/html')
   })
+
+  it('serves metrics endpoint', async () => {
+    const app = createApp()
+    const response = await request(app).get('/metrics')
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toContain('text/plain')
+    expect(response.text).toContain('clauditorium_http_requests_total')
+  })
 })

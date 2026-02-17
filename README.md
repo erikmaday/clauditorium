@@ -36,8 +36,10 @@ That's it. Server runs on `http://localhost:5051`.
 - Multi-turn chat with server-managed `conversation_id` context
 - Configurable via environment variables
 - Request tracking with unique IDs
+- Structured JSON logs for operational observability
+- Prometheus `/metrics` endpoint for runtime and HTTP telemetry
 - Environment and request validation with consistent error responses
-- Minimal dependencies (Express + cors)
+- Lean runtime dependencies (Express, cors, pino, prom-client)
 
 ## Architecture
 
@@ -76,16 +78,6 @@ npm run build
 ```
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
-
-## Dependency Upgrade Policy
-
-Minor/patch dependency updates are applied in normal feature work. Major upgrades are handled in dedicated PRs to reduce regression risk.
-
-Planned dedicated major upgrade tracks:
-
-- `vitest` + `@vitest/coverage-v8`: `3.x` -> `4.x`
-- `eslint`: `9.x` -> `10.x`
-- `express`: `4.x` -> `5.x`
 
 ## Compatibility
 
@@ -164,6 +156,7 @@ Any endpoint, request/response shape, status code, or auth requirement change mu
 | `/health` | GET | Health check |
 | `/health/history` | GET | Recent Claude CLI readiness check history |
 | `/health/recheck` | POST | Re-run Claude CLI readiness check |
+| `/metrics` | GET | Prometheus metrics endpoint (operational, not in OpenAPI spec) |
 | `/version` | GET | Version info |
 | `/openapi.yaml` | GET | Raw OpenAPI specification |
 | `/docs` | GET | Interactive API documentation UI |
@@ -274,6 +267,12 @@ curl http://localhost:5051/openapi.yaml
 ```
 
 Open in browser: `http://localhost:5051/docs`
+
+### GET /metrics
+
+```bash
+curl http://localhost:5051/metrics
+```
 
 The `model` parameter is optional for both endpoints. When omitted, the CLI default model is used.
 `/chat` responses include `conversation_id`, which you can reuse for continuation calls.
