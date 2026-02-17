@@ -9,6 +9,7 @@ import { errorHandler } from './middleware/errorHandler'
 import { notFoundHandler } from './middleware/notFound'
 import { askRouter } from './routes/ask'
 import { chatRouter } from './routes/chat'
+import { docsRouter } from './routes/docs'
 import { healthRouter } from './routes/health'
 import { versionRouter } from './routes/version'
 
@@ -26,6 +27,7 @@ export function createApp() {
 
   app.use('/health', healthRouter)
   app.use('/version', versionRouter)
+  app.use('/', docsRouter)
   app.use('/ask', apiKeyMiddleware, rateLimitMiddleware, askRouter)
   app.use('/chat', apiKeyMiddleware, rateLimitMiddleware, chatRouter)
 

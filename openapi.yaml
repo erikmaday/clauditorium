@@ -214,6 +214,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VersionResponse'
+  /openapi.yaml:
+    get:
+      summary: Get raw OpenAPI specification
+      security: []
+      responses:
+        '200':
+          description: OpenAPI YAML document
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '500':
+          description: Failed to load OpenAPI spec
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /docs:
+    get:
+      summary: Render interactive API documentation UI
+      security: []
+      responses:
+        '200':
+          description: HTML documentation UI
+          content:
+            text/html:
+              schema:
+                type: string
 components:
   securitySchemes:
     ApiKeyAuth:

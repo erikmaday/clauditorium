@@ -103,10 +103,13 @@ Any endpoint, request/response shape, status code, or auth requirement change mu
 | `/health/history` | GET | Recent Claude CLI readiness check history |
 | `/health/recheck` | POST | Re-run Claude CLI readiness check |
 | `/version` | GET | Version info |
+| `/openapi.yaml` | GET | Raw OpenAPI specification |
+| `/docs` | GET | Interactive API documentation UI |
 
 `/version` reports the package version from `package.json` at runtime.
 
 OpenAPI spec: [`openapi.yaml`](openapi.yaml)
+Interactive docs: `http://localhost:5051/docs`
 
 ### POST /ask
 
