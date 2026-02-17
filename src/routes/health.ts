@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { config } from '../config/env'
 import { strictApiKeyMiddleware } from '../middleware/apiKey'
+import { ApiErrorResponse, HealthHistoryResponse, HealthResponse } from '../types/api'
 import {
   checkClaudeCliReadiness,
   getClaudeCliReadiness,
@@ -10,7 +11,7 @@ import {
 
 const healthRouter = Router()
 
-function buildHealthResponse(): { statusCode: number, payload: unknown } {
+function buildHealthResponse(): { statusCode: number, payload: HealthResponse } {
   const readiness = getClaudeCliReadiness()
   const strictFailure = config.strictHealth && readiness.status === 'not_ready'
   const healthStatus = readiness.status === 'not_ready' ? 'degraded' : 'ok'
@@ -28,18 +29,18 @@ function buildHealthResponse(): { statusCode: number, payload: unknown } {
   }
 }
 
-healthRouter.get('/', (_req: Request, res: Response) => {
+healthRouter.get('/', (_req: Request, res: Response<HealthResponse>) => {
   const { statusCode, payload } = buildHealthResponse()
   res.status(statusCode).json(payload)
 })
 
-healthRouter.post('/recheck', strictApiKeyMiddleware, (_req: Request, res: Response) => {
+healthRouter.post('/recheck', strictApiKeyMiddleware, (_req: Request, res: Response<HealthResponse>) => {
   checkClaudeCliReadiness()
   const { statusCode, payload } = buildHealthResponse()
   res.status(statusCode).json(payload)
 })
 
-healthRouter.get('/history', (_req: Request, res: Response) => {
+healthRouter.get('/history', (_req: Request, res: Response<HealthHistoryResponse | ApiErrorResponse>) => {
   const sinceRaw = _req.query.since
   const history = getClaudeCliReadinessHistory()
 
@@ -63,17 +64,19 @@ healthRouter.get('/history', (_req: Request, res: Response) => {
       return
     }
 
-    res.json({
+    const filteredPayload: HealthHistoryResponse = {
       observability: getProcessObservability(),
       history: history.filter((entry) => Date.parse(entry.checked_at) >= sinceTime)
-    })
+    }
+    res.json(filteredPayload)
     return
   }
 
-  res.json({
+  const payload: HealthHistoryResponse = {
     observability: getProcessObservability(),
     history
-  })
+  }
+  res.json(payload)
 })
 
 export { healthRouter }

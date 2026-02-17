@@ -10,11 +10,12 @@ import {
   getConversation,
   saveConversation
 } from '../services/conversationStore'
+import { ApiErrorResponse, ChatResponse, DeleteConversationResponse, Message } from '../types/api'
 import { parseChatRequest } from './schemas'
 
 const chatRouter = Router()
 
-chatRouter.post('/', async (req: Request, res: Response) => {
+chatRouter.post('/', async (req: Request, res: Response<ChatResponse | ApiErrorResponse>) => {
   try {
     const body = parseChatRequest(req.body)
     let workingConversation: ConversationState
@@ -42,10 +43,11 @@ chatRouter.post('/', async (req: Request, res: Response) => {
     workingConversation.messages.push({ role: 'assistant', content: response })
     saveConversation(workingConversation)
 
-    res.json({
+    const assistantMessage: Message = { role: 'assistant', content: response }
+    const payload: ChatResponse = {
       success: true,
       conversation_id: workingConversation.id,
-      message: { role: 'assistant', content: response },
+      message: assistantMessage,
       conversation: {
         id: workingConversation.id,
         created_at: workingConversation.createdAt,
@@ -59,7 +61,8 @@ chatRouter.post('/', async (req: Request, res: Response) => {
         over_warn: workingConversation.charsUsed >= config.contextWarnChars,
         over_target: workingConversation.charsUsed >= config.contextTargetChars
       }
-    })
+    }
+    res.json(payload)
   } catch (err) {
     if (err instanceof ValidationError) {
       res.status(err.status).json({
@@ -80,7 +83,7 @@ chatRouter.post('/', async (req: Request, res: Response) => {
   }
 })
 
-chatRouter.delete('/:conversation_id', (req: Request, res: Response) => {
+chatRouter.delete('/:conversation_id', (req: Request, res: Response<DeleteConversationResponse | ApiErrorResponse>) => {
   const conversationIdValue = req.params.conversation_id
   const conversationId = Array.isArray(conversationIdValue)
     ? conversationIdValue[0]
@@ -96,12 +99,13 @@ chatRouter.delete('/:conversation_id', (req: Request, res: Response) => {
   }
 
   const deleted = deleteConversation(conversationId)
-  res.json({
+  const payload: DeleteConversationResponse = {
     success: true,
     conversation_id: conversationId,
     deleted,
     request_id: req.requestId
-  })
+  }
+  res.json(payload)
 })
 
 export { chatRouter }
