@@ -77,6 +77,12 @@ npm run build
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
 
+## Compatibility
+
+- Node.js: `>=18` (CI-tested on Node `22`)
+- Docker: tested via GitHub Actions Ubuntu runner with Docker Engine
+- Claude auth for containerized usage: set `CLAUDE_CODE_OAUTH_TOKEN` at runtime
+
 ## Use In Another Dockerized App
 
 Install `clauditorium` in your own Node service image and run it with a Claude token:
