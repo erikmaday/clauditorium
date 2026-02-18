@@ -1,4 +1,4 @@
-# Clauditorium Docs
+# Clauditorium
 
 Run Claude Code as a clean REST API service with conversation support, health/readiness endpoints, and production guardrails.
 

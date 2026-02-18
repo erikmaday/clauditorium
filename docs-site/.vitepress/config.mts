@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 const docsBase = process.env.DOCS_BASE || '/clauditorium/'
 
 export default defineConfig({
-  title: 'Clauditorium Docs',
+  title: 'Clauditorium',
   description: 'Tutorial-first guides for using the Clauditorium Claude CLI API server.',
   base: docsBase,
   cleanUrls: true,
