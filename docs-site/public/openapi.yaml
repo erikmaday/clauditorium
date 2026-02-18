@@ -1,0 +1,641 @@
+openapi: 3.0.3
+info:
+  title: Clauditorium API
+  version: 1.4.0
+  description: REST API wrapper around Claude CLI.
+servers:
+  - url: http://127.0.0.1:5051
+tags:
+  - name: Prompt
+    description: Single-prompt Claude interactions.
+  - name: Chat
+    description: Multi-turn chat operations.
+  - name: Health
+    description: Readiness, health status, and diagnostics.
+  - name: Meta
+    description: Service metadata and discovery endpoints.
+security:
+  - ApiKeyAuth: []
+paths:
+  /ask:
+    post:
+      summary: Send a single prompt to Claude
+      tags: [Prompt]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+              description: Seconds until next allowed request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+        '503':
+          description: Service is draining for graceful shutdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal/server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Claude CLI request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /chat:
+    post:
+      summary: Send chat input and receive the next assistant message with persistent conversation context
+      description: Start with `message` to create a conversation, then continue with `conversation_id` + `message`.
+      tags: [Chat]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              startConversation:
+                summary: Start a conversation
+                value:
+                  message: My name is Erik.
+                  system: You are concise.
+              continueConversation:
+                summary: Continue existing conversation
+                value:
+                  conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+                  message: Remind me what you know about me.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Request body too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+        '503':
+          description: Service is draining for graceful shutdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal/server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Claude CLI request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /chat/{conversation_id}:
+    get:
+      summary: Get conversation lifecycle metadata from in-memory store
+      tags: [Chat]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: conversation_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation lifecycle metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatConversationMetadataResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+    delete:
+      summary: Delete a conversation from in-memory store
+      tags: [Chat]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: conversation_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatDeleteResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      retry_after_seconds:
+                        type: integer
+  /health:
+    get:
+      summary: Get health and readiness status
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Health is OK or degraded (strict mode disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Health degraded in strict mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /health/history:
+    get:
+      summary: Get recent Claude CLI readiness checks
+      tags: [Health]
+      security: []
+      parameters:
+        - in: query
+          name: since
+          required: false
+          description: Optional ISO timestamp; only returns entries checked at or after this value.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Readiness history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthHistoryResponse'
+        '400':
+          description: Invalid since query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health/recheck:
+    post:
+      summary: Trigger a new Claude CLI readiness check
+      tags: [Health]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Recheck completed; health OK or degraded (strict mode disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: API key not configured or strict health degraded
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/HealthResponse'
+  /version:
+    get:
+      summary: Get runtime version/config summary
+      tags: [Meta]
+      security: []
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+  /models:
+    get:
+      summary: List available Claude models discovered from local Claude CLI binary
+      tags: [Meta]
+      security: []
+      responses:
+        '200':
+          description: Discovered model list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+        '500':
+          description: Model discovery failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Required for /ask and /chat when CLAUDE_API_KEY is configured, and always required for /health/recheck.
+  schemas:
+    Message:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+          example: Hello
+    AskRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+        model:
+          type: string
+      additionalProperties: false
+    AskResponse:
+      type: object
+      required: [success, response]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        response:
+          type: string
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: User message for either conversation creation or continuation.
+        conversation_id:
+          type: string
+          description: Existing conversation ID from prior /chat response.
+        system:
+          type: string
+          description: Optional system prompt. Allowed only when creating a new conversation.
+        model:
+          type: string
+      additionalProperties: false
+      description: Provide `message`; include `conversation_id` when continuing an existing conversation.
+    ChatConversationMeta:
+      type: object
+      required: [id, created_at, updated_at, expires_at]
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ChatContextMeta:
+      type: object
+      required: [tokens_used, warn_tokens, target_tokens, over_warn, over_target, compacted, compacted_messages]
+      properties:
+        tokens_used:
+          type: integer
+        warn_tokens:
+          type: integer
+        target_tokens:
+          type: integer
+        over_warn:
+          type: boolean
+        over_target:
+          type: boolean
+        compacted:
+          type: boolean
+        compacted_messages:
+          type: integer
+    ChatResponse:
+      type: object
+      required: [success, conversation_id, message, conversation, context]
+      example:
+        success: true
+        conversation_id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+        message:
+          role: assistant
+          content: You told me your name is Erik.
+        conversation:
+          id: 75c4a9b5-6d95-4b3c-b3da-5a49a4e86240
+          created_at: 2026-01-01T00:00:00.000Z
+          updated_at: 2026-01-01T00:00:10.000Z
+          expires_at: 2026-01-02T00:00:10.000Z
+        context:
+          tokens_used: 75
+          warn_tokens: 12000
+          target_tokens: 18000
+          over_warn: false
+          over_target: false
+          compacted: false
+          compacted_messages: 0
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        conversation_id:
+          type: string
+        message:
+          $ref: '#/components/schemas/Message'
+        conversation:
+          $ref: '#/components/schemas/ChatConversationMeta'
+        context:
+          $ref: '#/components/schemas/ChatContextMeta'
+    ChatDeleteResponse:
+      type: object
+      required: [success, conversation_id, deleted, request_id]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        conversation_id:
+          type: string
+        deleted:
+          type: boolean
+        request_id:
+          type: string
+    ChatConversationMetadataResponse:
+      type: object
+      required:
+        - success
+        - conversation_id
+        - status
+        - message_count
+        - tokens_used
+        - last_activity_at
+        - created_at
+        - expires_at
+        - request_id
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        conversation_id:
+          type: string
+        status:
+          type: string
+          enum: [active]
+        message_count:
+          type: integer
+        tokens_used:
+          type: integer
+        last_activity_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+    ModelsResponse:
+      type: object
+      required: [count, models]
+      properties:
+        count:
+          type: integer
+        models:
+          type: array
+          items:
+            type: string
+    Readiness:
+      type: object
+      required: [status, checked_at]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready, unknown]
+        checked_at:
+          type: string
+          format: date-time
+        check_duration_ms:
+          type: number
+        exit_code:
+          type: integer
+          nullable: true
+        signal:
+          type: string
+          nullable: true
+        version:
+          type: string
+        error:
+          type: string
+    Observability:
+      type: object
+      required: [started_at, uptime_seconds, claude_runtime]
+      properties:
+        started_at:
+          type: string
+          format: date-time
+        uptime_seconds:
+          type: number
+        claude_runtime:
+          type: object
+          required:
+            - active_requests
+            - queued_requests
+            - max_concurrent
+            - max_queue
+            - rejected_total
+            - queue_timeouts_total
+          properties:
+            active_requests:
+              type: integer
+            queued_requests:
+              type: integer
+            max_concurrent:
+              type: integer
+            max_queue:
+              type: integer
+            rejected_total:
+              type: integer
+            queue_timeouts_total:
+              type: integer
+    HealthResponse:
+      type: object
+      required: [status, strict_mode, observability, readiness]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        strict_mode:
+          type: boolean
+        observability:
+          $ref: '#/components/schemas/Observability'
+        readiness:
+          type: object
+          required: [claude_cli]
+          properties:
+            claude_cli:
+              $ref: '#/components/schemas/Readiness'
+    HealthHistoryResponse:
+      type: object
+      required: [observability, history]
+      properties:
+        observability:
+          $ref: '#/components/schemas/Observability'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Readiness'
+    VersionResponse:
+      type: object
+      required: [version, timeout, cors_enabled]
+      properties:
+        version:
+          type: string
+        timeout:
+          type: number
+          description: Request timeout in seconds.
+        cors_enabled:
+          type: boolean
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          nullable: true
+          description: Validation details when available.

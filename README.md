@@ -29,6 +29,18 @@ That's it. Server runs on `http://localhost:5051`.
 
 ---
 
+## Documentation Site
+
+Tutorial-first docs are published on GitHub Pages:
+
+- https://erikmaday.github.io/clauditorium/
+
+The site includes:
+
+- Quickstart and hands-on tutorials
+- Endpoint and config reference pages
+- Embedded OpenAPI explorer sourced from `openapi.yaml`
+
 ## Features
 
 - Simple REST API for Claude
@@ -75,9 +87,18 @@ npm run lint
 npm run test
 npm run test:coverage
 npm run build
+npm run docs:check
 ```
 
 Coverage thresholds are enforced in CI via `npm run test:coverage`.
+
+Run docs locally:
+
+```bash
+npm run docs:dev
+npm run docs:build
+npm run docs:preview
+```
 
 ## Compatibility
 
@@ -150,6 +171,13 @@ OpenAPI is the source of truth. Regenerate TypeScript contract types after spec 
 
 ```bash
 npm run openapi:types:generate
+```
+
+Docs OpenAPI embed is synced from root `openapi.yaml`:
+
+```bash
+npm run docs:sync-openapi
+npm run docs:sync-openapi:check
 ```
 
 ## API Endpoints

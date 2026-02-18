@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --vp-font-family-base: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --vp-font-family-mono: 'IBM Plex Mono', monospace;
+  --vp-c-brand-1: #0f766e;
+  --vp-c-brand-2: #0d9488;
+  --vp-c-brand-3: #14b8a6;
+  --vp-c-bg: #f8fafc;
+  --vp-c-bg-soft: #eef7f6;
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #0f766e 20%, #0891b2 80%);
+  --vp-home-hero-image-background-image: radial-gradient(circle at 30% 30%, rgba(15, 118, 110, 0.2), rgba(8, 145, 178, 0.15));
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #2dd4bf;
+  --vp-c-brand-2: #14b8a6;
+  --vp-c-brand-3: #0d9488;
+}
+
+.VPNavBarTitle .title {
+  letter-spacing: 0.2px;
+  font-weight: 700;
+}
+
+.custom-block.tip {
+  border-color: var(--vp-c-brand-2);
+}
+
+#swagger-ui-container {
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}

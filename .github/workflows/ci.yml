@@ -35,6 +35,9 @@ jobs:
       - name: Contract Tests
         run: npm run contract:test
 
+      - name: Docs Check
+        run: npm run docs:check
+
       - name: Test (Coverage Gate)
         run: npm run test:coverage
 
