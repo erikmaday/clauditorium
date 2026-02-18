@@ -43,6 +43,14 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: npm
 
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Show tool versions
+        run: |
+          node -v
+          npm -v
+
       - name: Validate version matches tag
         run: |
           TAG_VERSION="${{ steps.tag.outputs.value }}"
@@ -83,6 +91,9 @@ jobs:
       - name: Publish to npm
         if: steps.already_published.outputs.result != 'true'
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ''
+          NPM_TOKEN: ''
 
       - name: Create GitHub release for tag
         uses: softprops/action-gh-release@v2
