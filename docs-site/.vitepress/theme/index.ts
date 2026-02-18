@@ -1,7 +1,6 @@
 import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
 import OpenApiExplorer from './components/OpenApiExplorer.vue'
-import './custom.css'
 
 const theme: Theme = {
   extends: DefaultTheme,
