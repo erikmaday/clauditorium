@@ -72,3 +72,12 @@ onMounted(async () => {
 <template>
   <div :id="containerId" />
 </template>
+
+<style scoped>
+  #swagger-ui-container {
+    border: 1px solid rgba(15, 118, 110, 0.22);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+</style>
