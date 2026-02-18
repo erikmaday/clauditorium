@@ -82,9 +82,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.already_published.outputs.result != 'true'
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
 
       - name: Create GitHub release for tag
         uses: softprops/action-gh-release@v2
