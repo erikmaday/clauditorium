@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.4.1] - 2026-02-18
+
+### Added
+- VitePress documentation site with quickstart, tutorials, reference pages, troubleshooting, and OpenAPI explorer.
+- Docs build/deploy workflow for GitHub Pages (`.github/workflows/docs-pages.yml`).
+- Docs OpenAPI sync script (`scripts/sync-docs-openapi.ts`) and related npm scripts (`docs:*`).
+- Tag-driven GitHub release automation (`.github/workflows/release-on-tag.yml`).
+
+### Changed
+- Updated README with the new docs site link and docs development/build/check workflow.
+- Updated npm package metadata `homepage` to point to published docs.
+
+### Fixed
+- Restored a removed import regression affecting recent docs-related changes.
+
 ## [1.4.0] - 2026-02-17
 
 ### Breaking Changes
